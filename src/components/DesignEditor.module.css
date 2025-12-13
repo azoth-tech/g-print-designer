@@ -93,42 +93,79 @@
     margin-top: 0.25rem;
 }
 
-.mobileLayerToggle {
-    display: none;
+.layerToggle {
+    display: flex;
+    align-items: center;
     padding: 0.5rem 1rem;
-    background: var(--bg-tertiary);
-    border: 1px solid var(--border-color);
+    background: var(--primary-color);
+    border: 1px solid transparent;
     border-radius: var(--radius-md);
-    color: var(--text-primary);
+    color: white;
     font-size: 0.875rem;
+    font-weight: 500;
     cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-sm);
+}
+
+.layerToggle:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.toggleIcon {
+    margin-right: 0.5rem;
 }
 
 .layerPanelContainer {
     width: 300px;
     background: var(--bg-glass);
     border-left: 1px solid var(--border-color);
-    transition: transform 0.3s ease;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
 }
 
-.mobilePanelHeader {
-    display: none;
+/* Desktop Logic: Hide/Show panel to expand canvas */
+.layerPanelContainer.closed {
+    width: 0;
+    opacity: 0;
+    overflow: hidden;
+    border-left: none;
+    padding: 0;
 }
 
-.mobilePanelTitle {
+.panelHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.panelTitle {
     font-weight: 600;
     color: var(--text-primary);
 }
 
 .closeLayerPanel {
-    background: #ef4444;
+    display: block;
+    background: transparent;
     border: none;
-    border-radius: 4px;
-    color: white;
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
-    font-weight: 600;
+    border-radius: var(--radius-md);
+    color: var(--text-muted);
+    padding: 0.5rem;
+    font-size: 1.1rem;
     cursor: pointer;
+    line-height: 0;
+    transition: all 0.2s ease;
+}
+
+.closeLayerPanel:hover {
+    background: var(--bg-secondary);
+    color: var(--danger-color);
 }
 
 @media (max-width: 768px) {
@@ -138,10 +175,6 @@
 
     .title {
         font-size: 1.25rem;
-    }
-
-    .mobileLayerToggle {
-        display: block;
     }
 
     .canvasContainer {
@@ -161,32 +194,27 @@
         /* Higher z-index to overlay everything including canvas */
         background: var(--bg-secondary);
         box-shadow: -5px 0 15px rgba(0, 0, 0, 0.5);
-        display: flex;
-        flex-direction: column;
     }
 
     .layerPanelContainer.closed {
         transform: translateX(100%);
+        width: 85%;
+        /* Restore width for animation logic */
+        opacity: 1;
+        /* Handle opacity via display/transform */
         display: none;
-        /* Force remove from flow when closed */
     }
 
     .layerPanelContainer.open {
         transform: translateX(0);
         display: flex;
-        /* Changed from block to flex for column layout */
     }
 
-    .mobilePanelHeader {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 1rem;
-        background: var(--bg-tertiary);
-        border-bottom: 1px solid var(--border-color);
+    .toggleLabel {
+        display: none;
     }
 
-    .closeLayerPanel {
-        display: block;
+    .toggleIcon {
+        margin-right: 0;
     }
 }

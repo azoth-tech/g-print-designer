@@ -43,7 +43,7 @@ export const addImageToCanvas = async (
     editableArea?: EditableArea
 ): Promise<fabric.FabricImage> => {
     try {
-        const img = await fabric.FabricImage.fromURL(imageUrl, {}, { crossOrigin: 'anonymous' });
+        const img = await fabric.FabricImage.fromURL(imageUrl, { crossOrigin: 'anonymous' });
 
         // Scale image to fit within editable area if provided
         if (editableArea) {
@@ -98,23 +98,62 @@ export const exportCanvasToPNG = (canvas: fabric.Canvas, filename: string = 'des
 };
 
 export const exportCanvasToJSON = (canvas: fabric.Canvas): string => {
-    return JSON.stringify(canvas.toJSON());
+    // Include 'name' feature to identify the overlay
+    // Cast to any to avoid TS error with arguments
+    const json = (canvas as any).toJSON(['name']);
+
+    // Remove background image from export
+    delete json.backgroundImage;
+
+    // Remove the editable area overlay from export
+    if (json.objects) {
+        json.objects = json.objects.filter((obj: any) => obj.name !== 'editableAreaOverlay');
+    }
+
+    return JSON.stringify(json);
 };
 
-export const importCanvasFromJSON = (
+export const importCanvasFromJSON = async (
     canvas: fabric.Canvas,
     jsonString: string
 ): Promise<void> => {
-    return new Promise((resolve, reject) => {
-        try {
-            canvas.loadFromJSON(jsonString, () => {
-                canvas.renderAll();
-                resolve();
-            });
-        } catch (error) {
-            reject(error);
-        }
-    });
+    try {
+        const json = JSON.parse(jsonString);
+
+        if (!json.objects || !Array.isArray(json.objects)) return;
+
+        // Enliven objects (hydrate them from JSON data)
+        const enlivenedObjects = await fabric.util.enlivenObjects(json.objects);
+
+        // Remove existing user objects, but KEEP the overlay
+        const existingObjects = canvas.getObjects();
+        existingObjects.forEach((obj) => {
+            if ((obj as any).name !== 'editableAreaOverlay') {
+                canvas.remove(obj);
+            }
+        });
+
+        // Add the imported objects to the canvas
+        // (Fabric v6 enlivenObjects returns an array of objects)
+        enlivenedObjects.forEach((obj) => {
+            const fabricObj = obj as unknown as fabric.Object;
+            // Skip the overlay if it was included in the JSON (prevent duplication)
+            if ((fabricObj as any).name === 'editableAreaOverlay') {
+                return;
+            }
+
+            // enlivenObjects can return Filters/Gradients etc which are not Objects
+            // We only want to add valid Objects to the canvas
+            if (fabricObj && typeof fabricObj.set === 'function') {
+                canvas.add(fabricObj);
+            }
+        });
+
+        canvas.requestRenderAll();
+    } catch (error) {
+        console.error('Error importing JSON:', error);
+        throw error;
+    }
 };
 
 export const downloadJSON = (jsonString: string, filename: string = 'design.json') => {
