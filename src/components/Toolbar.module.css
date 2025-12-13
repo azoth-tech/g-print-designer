@@ -143,6 +143,50 @@
 
     .icon {
         margin-right: 0;
+        font-size: 1.5rem;
+    }
+
+    .exportButtons {
+        margin-left: 0;
+        margin-top: 0.5rem;
+    }
+
+    /* Mobile Floating Toolbar Adjustments */
+    .floatingToolbar {
+        max-width: 95vw !important;
+        /* Force constraint */
+        width: 95vw;
+    }
+
+    .floatingContent {
+        padding: 0.25rem;
+    }
+
+    .floatingToolbar .toolbarSection {
+        flex-wrap: wrap;
+        /* Allow items to wrap */
+        justify-content: center;
+        width: 100%;
+        padding: 0.25rem;
+    }
+
+    .formatButton {
+        width: 2rem;
+        height: 2rem;
+        font-size: 0.875rem;
+    }
+
+    /* Make inputs flexible on mobile so they don't overflow */
+    .fontSelect,
+    .fontSizeInput,
+    .colorInput {
+        flex: 1;
+        min-width: 60px;
+        /* Reduce min width */
+    }
+
+    .fontSelect {
+        min-width: 100px;
     }
 }
 
@@ -155,17 +199,74 @@
     backdrop-filter: blur(10px);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
+    display: flex;
+    flex-direction: column;
+    /* Stack header and content */
+    gap: 0;
+    /* Gap handled by internal padding */
+    box-shadow: var(--shadow-lg);
+    z-index: 9999;
+    width: max-content;
+    max-width: 90vw;
+    /* animation: slideUp 0.3s ease-out; */
+    /* Removed to prevent jumping */
+    padding: 0;
+    /* Remove padding from container, move to content */
+    overflow: hidden;
+    /* For header radius */
+}
+
+.floatingHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem;
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border-color);
+    cursor: move;
+    /* Drag cursor */
+}
+
+.headerTitle {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin: 0 auto;
+    /* Center title */
+    pointer-events: none;
+}
+
+.dragHandle {
+    color: var(--text-muted);
+    margin-right: 0.5rem;
+}
+
+.closeToolbar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+}
+
+.closeToolbar:hover {
+    background: var(--danger-color);
+    color: white;
+}
+
+.floatingContent {
     padding: 0.5rem;
     display: flex;
     gap: 0.5rem;
-    box-shadow: var(--shadow-lg);
-    z-index: 1000;
     flex-wrap: wrap;
     justify-content: center;
-    width: max-content;
-    max-width: 90vw;
-    animation: slideUp 0.3s ease-out;
 }
+
 
 @keyframes slideUp {
     from {

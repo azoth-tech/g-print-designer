@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import * as fabric from 'fabric';
+import { FaLayerGroup, FaTimes } from 'react-icons/fa';
 import Toolbar from './Toolbar';
 import LayerPanel from './LayerPanel';
 import styles from './DesignEditor.module.css';
@@ -99,7 +100,6 @@ export default function DesignEditor({ productConfig }: DesignEditorProps) {
             try {
                 const img = await fabric.FabricImage.fromURL(
                     productConfig.mockupImage,
-                    {},
                     { crossOrigin: 'anonymous' }
                 );
 
@@ -201,10 +201,12 @@ export default function DesignEditor({ productConfig }: DesignEditorProps) {
                     Editing Product {productConfig.name}
                 </p>
                 <button
-                    className={styles.mobileLayerToggle}
-                    onClick={toggleLayerPanel}
+                    className={styles.layerToggle}
+                    onClick={() => setIsLayerPanelOpen(!isLayerPanelOpen)}
+                    title={isLayerPanelOpen ? 'Hide Layers' : 'Show Layers'}
                 >
-                    {isLayerPanelOpen ? 'Hide Layers' : 'Show Layers'}
+                    <FaLayerGroup className={styles.toggleIcon} />
+                    <span className={styles.toggleLabel}>{isLayerPanelOpen ? 'Hide Layers' : 'Layers'}</span>
                 </button>
             </div>
 
@@ -227,31 +229,36 @@ export default function DesignEditor({ productConfig }: DesignEditorProps) {
                     <div
                         className={styles.canvasWrapper}
                         style={{
-                            width: canvas ? (canvas.width || 800) * layoutScale : 800,
-                            height: canvas ? (canvas.height || 800) * layoutScale : 600,
+                            width: (canvas?.width || 800) * layoutScale,
+                            height: (canvas?.height || 800) * layoutScale,
                             overflow: 'hidden'
                         }}
                     >
                         <div style={{
                             transform: `scale(${layoutScale})`,
                             transformOrigin: 'top left',
-                            width: canvas ? canvas.width : 800,
-                            height: canvas ? canvas.height : 800,
+                            width: canvas?.width || 800,
+                            height: canvas?.height || 800
                         }}>
                             <canvas ref={canvasRef} className={styles.canvas} />
+                            {isLoading && (
+                                <div className={styles.loadingOverlay}>
+                                    <div className={styles.loadingSpinner} />
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
 
                 <div className={`${styles.layerPanelContainer} ${isLayerPanelOpen ? styles.open : styles.closed}`}>
-                    <div className={styles.mobilePanelHeader}>
-                        <span className={styles.mobilePanelTitle}>Layers</span>
+                    <div className={styles.panelHeader}>
+                        <span className={styles.panelTitle}>Layers</span>
                         <button
                             className={styles.closeLayerPanel}
                             onClick={() => setIsLayerPanelOpen(false)}
-                            aria-label="Close Layer Panel"
+                            title="Close Panel"
                         >
-                            Close
+                            <FaTimes />
                         </button>
                     </div>
                     <LayerPanel canvas={canvas} />
