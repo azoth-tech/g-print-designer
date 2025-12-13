@@ -1,0 +1,129 @@
+.toolbar {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    background: var(--bg-glass);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: var(--shadow-md);
+    flex-wrap: wrap;
+}
+
+.toolbarSection {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border-radius: var(--radius-md);
+}
+
+.toolbarDivider {
+    width: 1px;
+    height: 2rem;
+    background: var(--border-color);
+    margin: 0 0.5rem;
+}
+
+.toolbarLabel {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    margin-right: 0.5rem;
+}
+
+.fontSelect,
+.fontSizeInput,
+.colorInput {
+    min-width: 120px;
+}
+
+.fontSizeInput {
+    min-width: 80px;
+}
+
+.colorInput {
+    min-width: 80px;
+    height: 2.5rem;
+    cursor: pointer;
+    padding: 0.25rem;
+}
+
+.colorInput::-webkit-color-swatch-wrapper {
+    padding: 2px;
+}
+
+.colorInput::-webkit-color-swatch {
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-sm);
+}
+
+.formatButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: var(--radius-md);
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    transition: all var(--transition-base);
+    border: 1px solid var(--border-color);
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.formatButton:hover {
+    background: var(--border-light);
+    color: var(--primary-light);
+}
+
+.formatButton.active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.exportButtons {
+    margin-left: auto;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.clipartGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+    gap: 0.5rem;
+    padding: 0.5rem;
+    max-width: 300px;
+}
+
+.clipartItem {
+    aspect-ratio: 1;
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 0.5rem;
+    background: var(--bg-secondary);
+    cursor: pointer;
+    transition: all var(--transition-base);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.clipartItem:hover {
+    border-color: var(--primary-color);
+    transform: scale(1.05);
+    box-shadow: var(--shadow-md);
+}
+
+.clipartItem img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.fileInput {
+    display: none;
+}
