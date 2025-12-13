@@ -11,9 +11,9 @@ import {
     FaAlignRight,
     FaFileDownload,
     FaFileUpload,
-    FaPlus,
     FaImage,
     FaFont,
+    FaSmile,
 } from 'react-icons/fa';
 import styles from './Toolbar.module.css';
 import { addTextToCanvas, addImageToCanvas } from '@/utils/canvasUtils';
@@ -59,6 +59,8 @@ export default function Toolbar({
     const [showClipart, setShowClipart] = useState(false);
     const [clipartPosition, setClipartPosition] = useState({ top: 0, left: 0 });
 
+    const [forceUpdate, setForceUpdate] = useState({});
+
     // Update active object when selection changes
     React.useEffect(() => {
         if (!canvas) return;
@@ -66,16 +68,23 @@ export default function Toolbar({
         const handleSelection = () => {
             const selected = canvas.getActiveObject();
             setActiveObject(selected || null);
+            setForceUpdate({});
+        };
+
+        const handleModification = () => {
+            setForceUpdate({});
         };
 
         canvas.on('selection:created', handleSelection);
         canvas.on('selection:updated', handleSelection);
         canvas.on('selection:cleared', () => setActiveObject(null));
+        canvas.on('object:modified', handleModification);
 
         return () => {
             canvas.off('selection:created', handleSelection);
             canvas.off('selection:updated', handleSelection);
             canvas.off('selection:cleared');
+            canvas.off('object:modified', handleModification);
         };
     }, [canvas]);
 
@@ -140,6 +149,7 @@ export default function Toolbar({
         if (!canvas || !activeObject || (activeObject.type !== 'i-text' && activeObject.type !== 'textbox')) return;
         (activeObject as any).set('fontFamily', e.target.value);
         canvas.renderAll();
+        setForceUpdate({});
     };
 
     const handleFontSizeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -148,6 +158,7 @@ export default function Toolbar({
         if (size > 0) {
             (activeObject as any).set('fontSize', size);
             canvas.renderAll();
+            setForceUpdate({});
         }
     };
 
@@ -155,6 +166,7 @@ export default function Toolbar({
         if (!canvas || !activeObject) return;
         activeObject.set('fill', e.target.value);
         canvas.renderAll();
+        setForceUpdate({});
     };
 
     // Helper function to convert RGB to hex
@@ -178,6 +190,7 @@ export default function Toolbar({
         const currentWeight = text.fontWeight;
         text.set('fontWeight', currentWeight === 'bold' ? 'normal' : 'bold');
         canvas.renderAll();
+        setForceUpdate({});
     };
 
     const toggleItalic = () => {
@@ -186,12 +199,14 @@ export default function Toolbar({
         const currentStyle = text.fontStyle;
         text.set('fontStyle', currentStyle === 'italic' ? 'normal' : 'italic');
         canvas.renderAll();
+        setForceUpdate({});
     };
 
     const setTextAlign = (align: string) => {
         if (!canvas || !activeObject || (activeObject.type !== 'i-text' && activeObject.type !== 'textbox')) return;
         (activeObject as any).set('textAlign', align);
         canvas.renderAll();
+        setForceUpdate({});
     };
 
     const isTextSelected = activeObject?.type === 'i-text' || activeObject?.type === 'textbox';
@@ -202,8 +217,8 @@ export default function Toolbar({
             {/* Add Elements */}
             <div className={styles.toolbarSection}>
                 <button className="btn-primary" onClick={handleAddText} title="Add Text">
-                    <FaFont style={{ marginRight: '0.5rem' }} />
-                    Add Text
+                    <FaFont className={styles.icon} />
+                    <span className={styles.buttonLabel}>Add Text</span>
                 </button>
 
                 <button
@@ -211,8 +226,8 @@ export default function Toolbar({
                     onClick={() => fileInputRef.current?.click()}
                     title="Upload Image"
                 >
-                    <FaImage style={{ marginRight: '0.5rem' }} />
-                    Upload Image
+                    <FaImage className={styles.icon} />
+                    <span className={styles.buttonLabel}>Upload Image</span>
                 </button>
                 <input
                     ref={fileInputRef}
@@ -229,8 +244,8 @@ export default function Toolbar({
                         onClick={() => setShowClipart(!showClipart)}
                         title="Clipart Library"
                     >
-                        <FaPlus style={{ marginRight: '0.5rem' }} />
-                        Clipart
+                        <FaSmile className={styles.icon} />
+                        <span className={styles.buttonLabel}>Clipart</span>
                     </button>
                 </div>
             </div>
@@ -270,112 +285,103 @@ export default function Toolbar({
                     document.body
                 )}
 
-            {/* Text Formatting */}
-            <div className={styles.toolbarSection}>
-                <span className={styles.toolbarLabel}>Font:</span>
-                <select
-                    className={styles.fontSelect}
-                    value={currentText?.fontFamily || 'Arial'}
-                    onChange={handleFontChange}
-                    disabled={!isTextSelected}
-                >
-                    {FONT_FAMILIES.map((font) => (
-                        <option key={font} value={font}>
-                            {font}
-                        </option>
-                    ))}
-                </select>
-
-                <input
-                    type="number"
-                    className={styles.fontSizeInput}
-                    value={currentText?.fontSize || 32}
-                    onChange={handleFontSizeChange}
-                    disabled={!isTextSelected}
-                    min="8"
-                    max="200"
-                    title="Font Size"
-                />
-
-                <input
-                    type="color"
-                    className={styles.colorInput}
-                    value={rgbToHex(activeObject?.fill || '#000000')}
-                    onChange={handleColorChange}
-                    disabled={!activeObject}
-                    title="Color"
-                />
-            </div>
-
-            <div className={styles.toolbarSection}>
-                <button
-                    className={`${styles.formatButton} ${currentText?.fontWeight === 'bold' ? styles.active : ''
-                        }`}
-                    onClick={toggleBold}
-                    disabled={!isTextSelected}
-                    title="Bold"
-                >
-                    <FaBold />
-                </button>
-
-                <button
-                    className={`${styles.formatButton} ${currentText?.fontStyle === 'italic' ? styles.active : ''
-                        }`}
-                    onClick={toggleItalic}
-                    disabled={!isTextSelected}
-                    title="Italic"
-                >
-                    <FaItalic />
-                </button>
-
-                <button
-                    className={`${styles.formatButton} ${currentText?.textAlign === 'left' ? styles.active : ''
-                        }`}
-                    onClick={() => setTextAlign('left')}
-                    disabled={!isTextSelected}
-                    title="Align Left"
-                >
-                    <FaAlignLeft />
-                </button>
-
-                <button
-                    className={`${styles.formatButton} ${currentText?.textAlign === 'center' ? styles.active : ''
-                        }`}
-                    onClick={() => setTextAlign('center')}
-                    disabled={!isTextSelected}
-                    title="Align Center"
-                >
-                    <FaAlignCenter />
-                </button>
-
-                <button
-                    className={`${styles.formatButton} ${currentText?.textAlign === 'right' ? styles.active : ''
-                        }`}
-                    onClick={() => setTextAlign('right')}
-                    disabled={!isTextSelected}
-                    title="Align Right"
-                >
-                    <FaAlignRight />
-                </button>
-            </div>
-
             {/* Export/Import */}
             <div className={styles.exportButtons}>
                 <button className="btn-secondary" onClick={onImportJSON} title="Import Design">
-                    <FaFileUpload style={{ marginRight: '0.5rem' }} />
-                    Import
+                    <FaFileUpload className={styles.icon} />
+                    <span className={styles.buttonLabel}>Import</span>
                 </button>
 
                 <button className="btn-primary" onClick={onExportJSON} title="Export as JSON">
-                    <FaFileDownload style={{ marginRight: '0.5rem' }} />
-                    Save JSON
+                    <FaFileDownload className={styles.icon} />
+                    <span className={styles.buttonLabel}>Save JSON</span>
                 </button>
 
                 <button className="btn-primary" onClick={onExportPNG} title="Export as PNG">
-                    <FaFileDownload style={{ marginRight: '0.5rem' }} />
-                    Export PNG
+                    <FaFileDownload className={styles.icon} />
+                    <span className={styles.buttonLabel}>Export PNG</span>
                 </button>
             </div>
+
+            {/* Floating Text Toolbar - Only visible when text is selected */}
+            {isTextSelected && (
+                <div className={styles.floatingToolbar}>
+                    <div className={styles.toolbarSection}>
+                        <span className={styles.toolbarLabel}>Font:</span>
+                        <select
+                            className={styles.fontSelect}
+                            value={currentText?.fontFamily || 'Arial'}
+                            onChange={handleFontChange}
+                        >
+                            {FONT_FAMILIES.map((font) => (
+                                <option key={font} value={font}>
+                                    {font}
+                                </option>
+                            ))}
+                        </select>
+
+                        <input
+                            type="number"
+                            className={styles.fontSizeInput}
+                            value={currentText?.fontSize || 32}
+                            onChange={handleFontSizeChange}
+                            min="8"
+                            max="200"
+                            title="Font Size"
+                        />
+
+                        <input
+                            type="color"
+                            className={styles.colorInput}
+                            value={rgbToHex(activeObject?.fill || '#000000')}
+                            onChange={handleColorChange}
+                            title="Color"
+                        />
+                    </div>
+
+                    <div className={styles.toolbarSection}>
+                        <button
+                            className={`${styles.formatButton} ${currentText?.fontWeight === 'bold' ? styles.active : ''}`}
+                            onClick={toggleBold}
+                            title="Bold"
+                        >
+                            <FaBold />
+                        </button>
+
+                        <button
+                            className={`${styles.formatButton} ${currentText?.fontStyle === 'italic' ? styles.active : ''}`}
+                            onClick={toggleItalic}
+                            title="Italic"
+                        >
+                            <FaItalic />
+                        </button>
+
+                        <button
+                            className={`${styles.formatButton} ${currentText?.textAlign === 'left' ? styles.active : ''}`}
+                            onClick={() => setTextAlign('left')}
+                            title="Align Left"
+                        >
+                            <FaAlignLeft />
+                        </button>
+
+                        <button
+                            className={`${styles.formatButton} ${currentText?.textAlign === 'center' ? styles.active : ''}`}
+                            onClick={() => setTextAlign('center')}
+                            title="Align Center"
+                        >
+                            <FaAlignCenter />
+                        </button>
+
+                        <button
+                            className={`${styles.formatButton} ${currentText?.textAlign === 'right' ? styles.active : ''}`}
+                            onClick={() => setTextAlign('right')}
+                            title="Align Right"
+                        >
+                            <FaAlignRight />
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

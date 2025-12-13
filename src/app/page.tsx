@@ -6,9 +6,9 @@ const productConfig: ProductConfig = {
   mockupImage: '/tshirt_mockup.png',
   editableArea: {
     left: 250,
-    top: 300,
+    top: 280,
     width: 300,
-    height: 400,
+    height: 350,
   },
 };
 

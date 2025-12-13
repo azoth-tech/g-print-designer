@@ -22,28 +22,64 @@ export default function DesignEditor({ productConfig }: DesignEditorProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [canvas, setCanvas] = useState<fabric.Canvas | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isLayerPanelOpen, setIsLayerPanelOpen] = useState(true);
+    const [layoutScale, setLayoutScale] = useState(1);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Toggle layer panel on mobile and calculate scale
+    useEffect(() => {
+        const handleResize = () => {
+            const width = window.innerWidth;
+            if (width < 768) {
+                setIsLayerPanelOpen(false);
+            } else {
+                setIsLayerPanelOpen(true);
+            }
+
+            // Calculate scale to fit 800px canvas into screen
+            // Check both width and height constraints
+            const padding = 32;
+            const headerHeight = 100; // Approx header + toolbar height
+            const availableWidth = width - padding;
+            const availableHeight = window.innerHeight - headerHeight - padding;
+
+            const scaleX = availableWidth / 800;
+            const scaleY = availableHeight / 800;
+
+            // Use the smaller scale to ensure it fits in both dimensions
+            const targetScale = Math.min(1, scaleX, scaleY);
+            setLayoutScale(targetScale);
+        };
+
+        handleResize(); // Initial check
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     useEffect(() => {
         if (!canvasRef.current) return;
 
+        let isMounted = true;
+
         // Initialize Fabric canvas
         const fabricCanvas = new fabric.Canvas(canvasRef.current, {
             width: 800,
-            height: 1000,
+            height: 1, // Start small, will resize to image
             backgroundColor: '#ffffff',
+            preserveObjectStacking: true, // Fix for layers behind rendering
         });
 
-        // Add boundary constraints
+        // Add boundary constraints - logic is now simple again (no scaling needed)
         fabricCanvas.on('object:moving', (e) => {
             const obj = e.target;
             if (!obj || (obj as any).name === 'editableAreaOverlay') return;
 
             const { editableArea } = productConfig;
+
             const objWidth = (obj.width || 0) * (obj.scaleX || 1);
             const objHeight = (obj.height || 0) * (obj.scaleY || 1);
 
-            // Constrain to editable area
+            // Constrain to editable area (using original coordinates)
             if (obj.left! < editableArea.left) {
                 obj.left = editableArea.left;
             }
@@ -67,11 +103,21 @@ export default function DesignEditor({ productConfig }: DesignEditorProps) {
                     { crossOrigin: 'anonymous' }
                 );
 
-                // Scale image to fit canvas
-                const scale = Math.min(
-                    fabricCanvas.width! / (img.width || 1),
-                    fabricCanvas.height! / (img.height || 1)
-                );
+                if (!isMounted) return;
+
+                // Set canvas to exact image dimensions (or max 800 width logic if preferred, 
+                // but let's stick to 800 max width for consistency with scale calculation)
+                const MAX_WIDTH = 800;
+                // Scale image to fit 800px width constraint if it's huge, otherwise keep original
+                const scale = img.width && img.width > MAX_WIDTH ? MAX_WIDTH / img.width : 1;
+
+                const finalWidth = (img.width || 800) * scale;
+                const finalHeight = (img.height || 800) * scale;
+
+                fabricCanvas.setDimensions({
+                    width: finalWidth,
+                    height: finalHeight
+                });
 
                 img.scale(scale);
                 img.set({
@@ -84,7 +130,7 @@ export default function DesignEditor({ productConfig }: DesignEditorProps) {
                 fabricCanvas.backgroundImage = img;
                 fabricCanvas.renderAll();
 
-                // Add editable area overlay
+                // Add editable area overlay (using original coordinates)
                 const overlay = createEditableAreaOverlay(
                     fabricCanvas,
                     productConfig.editableArea
@@ -94,6 +140,7 @@ export default function DesignEditor({ productConfig }: DesignEditorProps) {
 
                 setIsLoading(false);
             } catch (error) {
+                if (!isMounted) return;
                 console.error('Failed to load mockup image:', error);
                 setIsLoading(false);
             }
@@ -104,6 +151,7 @@ export default function DesignEditor({ productConfig }: DesignEditorProps) {
 
         // Cleanup
         return () => {
+            isMounted = false;
             fabricCanvas.dispose();
         };
     }, [productConfig]);
@@ -141,6 +189,10 @@ export default function DesignEditor({ productConfig }: DesignEditorProps) {
         e.target.value = '';
     };
 
+    const toggleLayerPanel = () => {
+        setIsLayerPanelOpen(!isLayerPanelOpen);
+    };
+
     return (
         <div className={styles.container}>
             <div className={styles.header}>
@@ -148,6 +200,12 @@ export default function DesignEditor({ productConfig }: DesignEditorProps) {
                 <p className={styles.subtitle}>
                     Editing Product {productConfig.name}
                 </p>
+                <button
+                    className={styles.mobileLayerToggle}
+                    onClick={toggleLayerPanel}
+                >
+                    {isLayerPanelOpen ? 'Hide Layers' : 'Show Layers'}
+                </button>
             </div>
 
             <Toolbar
@@ -165,12 +223,39 @@ export default function DesignEditor({ productConfig }: DesignEditorProps) {
                             <div className={styles.loadingSpinner} />
                         </div>
                     )}
-                    <div className={styles.canvasWrapper}>
-                        <canvas ref={canvasRef} className={styles.canvas} />
+                    {/* Responsive Canvas Wrapper */}
+                    <div
+                        className={styles.canvasWrapper}
+                        style={{
+                            width: canvas ? (canvas.width || 800) * layoutScale : 800,
+                            height: canvas ? (canvas.height || 800) * layoutScale : 600,
+                            overflow: 'hidden'
+                        }}
+                    >
+                        <div style={{
+                            transform: `scale(${layoutScale})`,
+                            transformOrigin: 'top left',
+                            width: canvas ? canvas.width : 800,
+                            height: canvas ? canvas.height : 800,
+                        }}>
+                            <canvas ref={canvasRef} className={styles.canvas} />
+                        </div>
                     </div>
                 </div>
 
-                <LayerPanel canvas={canvas} />
+                <div className={`${styles.layerPanelContainer} ${isLayerPanelOpen ? styles.open : styles.closed}`}>
+                    <div className={styles.mobilePanelHeader}>
+                        <span className={styles.mobilePanelTitle}>Layers</span>
+                        <button
+                            className={styles.closeLayerPanel}
+                            onClick={() => setIsLayerPanelOpen(false)}
+                            aria-label="Close Layer Panel"
+                        >
+                            Close
+                        </button>
+                    </div>
+                    <LayerPanel canvas={canvas} />
+                </div>
             </div>
 
             {/* Hidden file input for JSON import */}

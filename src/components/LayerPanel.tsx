@@ -10,6 +10,8 @@ import {
     FaTrash,
     FaLayerGroup,
     FaGripVertical,
+    FaArrowUp,
+    FaArrowDown,
 } from 'react-icons/fa';
 import styles from './LayerPanel.module.css';
 import { Layer } from '@/types/types';
@@ -116,9 +118,9 @@ export default function LayerPanel({ canvas }: LayerPanelProps) {
         const currentIndex = objects.indexOf(layer.fabricObject as any);
 
         if (direction === 'up' && currentIndex < objects.length - 1) {
-            layer.fabricObject.bringForward();
+            canvas.bringObjectForward(layer.fabricObject as any);
         } else if (direction === 'down' && currentIndex > 0) {
-            layer.fabricObject.sendBackwards();
+            canvas.sendObjectBackwards(layer.fabricObject as any);
         }
 
         canvas.renderAll();
@@ -168,6 +170,26 @@ export default function LayerPanel({ canvas }: LayerPanelProps) {
                             </div>
 
                             <div className={styles.layerActions}>
+                                <button
+                                    className={styles.layerActionBtn}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleMoveLayer(layer, 'up');
+                                    }}
+                                    title="Move Up"
+                                >
+                                    <FaArrowUp size={12} />
+                                </button>
+                                <button
+                                    className={styles.layerActionBtn}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleMoveLayer(layer, 'down');
+                                    }}
+                                    title="Move Down"
+                                >
+                                    <FaArrowDown size={12} />
+                                </button>
                                 <button
                                     className={`${styles.layerActionBtn} ${!layer.visible ? styles.hidden : ''
                                         }`}

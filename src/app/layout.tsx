@@ -19,6 +19,12 @@ export const metadata: Metadata = {
   description: "Create stunning designs for t-shirts, mugs, and more with our powerful design editor",
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{

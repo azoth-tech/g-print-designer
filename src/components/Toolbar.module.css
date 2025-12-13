@@ -127,3 +127,54 @@
 .fileInput {
     display: none;
 }
+
+.buttonLabel {
+    display: inline;
+}
+
+.icon {
+    margin-right: 0.5rem;
+}
+
+@media (max-width: 768px) {
+    .buttonLabel {
+        display: none;
+    }
+
+    .icon {
+        margin-right: 0;
+    }
+}
+
+.floatingToolbar {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg-glass);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 0.5rem;
+    display: flex;
+    gap: 0.5rem;
+    box-shadow: var(--shadow-lg);
+    z-index: 1000;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: max-content;
+    max-width: 90vw;
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translate(-50%, 20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translate(-50%, 0);
+    }
+}
