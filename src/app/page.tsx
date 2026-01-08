@@ -10,6 +10,7 @@ const productConfig: ProductConfig = {
     width: 200,
     height: 250,
   },
+  templateCategory: 'tshirt',
 };
 
 // const productConfig: ProductConfig = {

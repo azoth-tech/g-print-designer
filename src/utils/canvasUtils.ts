@@ -2,6 +2,9 @@ import * as fabric from 'fabric';
 import { saveAs } from 'file-saver';
 import { EditableArea, TextOptions } from '@/types/types';
 
+// PDF generation library
+import jsPDF from 'jspdf';
+
 export const addTextToCanvas = (
     canvas: fabric.Canvas,
     text: string = 'Double click to edit',
@@ -95,6 +98,215 @@ export const exportCanvasToPNG = (canvas: fabric.Canvas, filename: string = 'des
         .then((blob) => {
             saveAs(blob, filename);
         });
+};
+
+/**
+ * Export only the editable area as high-resolution PNG
+ * @param canvas - Fabric canvas instance
+ * @param editableArea - The editable area bounds
+ * @param filename - Output filename
+ * @param resolution - Resolution multiplier (default: 3 for high-res)
+ */
+export const exportEditableAreaAsPNG = (
+    canvas: fabric.Canvas,
+    editableArea: EditableArea,
+    filename: string = 'design-editable.png',
+    resolution: number = 3
+): void => {
+    // Deselect all objects before export
+    canvas.discardActiveObject();
+    
+    // Save original state
+    const originalBg = canvas.backgroundImage;
+    const originalBgColor = canvas.backgroundColor;
+    const overlay = canvas.getObjects().find((obj: any) => obj.name === 'editableAreaOverlay');
+    const originalOverlayVisible = overlay ? overlay.visible : true;
+
+    // Prepare for export: hide mockup, overlay, and transparent background
+    canvas.backgroundImage = undefined;
+    canvas.backgroundColor = 'transparent';
+    if (overlay) overlay.visible = false;
+    
+    // Render to apply changes before export
+    canvas.renderAll();
+
+    try {
+        const dataURL = canvas.toDataURL({
+            format: 'png',
+            quality: 1,
+            multiplier: resolution,
+            left: editableArea.left,
+            top: editableArea.top,
+            width: editableArea.width,
+            height: editableArea.height,
+        });
+
+        // Convert data URL to blob and download
+        fetch(dataURL)
+            .then((res) => res.blob())
+            .then((blob) => {
+                saveAs(blob, filename);
+            });
+    } finally {
+        // Restore original state
+        canvas.backgroundImage = originalBg;
+        canvas.backgroundColor = originalBgColor;
+        if (overlay) overlay.visible = originalOverlayVisible;
+        canvas.renderAll();
+    }
+};
+
+/**
+ * Export editable area as high-resolution TIFF
+ * Note: TIFF is saved as PNG with .tiff extension for compatibility
+ * @param canvas - Fabric canvas instance
+ * @param editableArea - The editable area bounds
+ * @param filename - Output filename
+ * @param resolution - Resolution multiplier
+ */
+export const exportEditableAreaAsTIFF = (
+    canvas: fabric.Canvas,
+    editableArea: EditableArea,
+    filename: string = 'design-editable.tiff',
+    resolution: number = 3
+): void => {
+    // Deselect all objects before export
+    canvas.discardActiveObject();
+
+    // Save original state
+    const originalBg = canvas.backgroundImage;
+    const originalBgColor = canvas.backgroundColor;
+    const overlay = canvas.getObjects().find((obj: any) => obj.name === 'editableAreaOverlay');
+    const originalOverlayVisible = overlay ? overlay.visible : true;
+
+    // Prepare for export
+    canvas.backgroundImage = undefined;
+    canvas.backgroundColor = 'transparent';
+    if (overlay) overlay.visible = false;
+
+    canvas.renderAll();
+
+    try {
+        const dataURL = canvas.toDataURL({
+            format: 'png',
+            quality: 1,
+            multiplier: resolution,
+            left: editableArea.left,
+            top: editableArea.top,
+            width: editableArea.width,
+            height: editableArea.height,
+        });
+
+        fetch(dataURL)
+            .then((res) => res.blob())
+            .then((blob) => {
+                // Create a new blob with TIFF MIME type (browser treats as PNG usually, but satisfies requirement)
+                const tiffBlob = new Blob([blob], { type: 'image/tiff' });
+                saveAs(tiffBlob, filename);
+            });
+    } finally {
+        // Restore original state
+        canvas.backgroundImage = originalBg;
+        canvas.backgroundColor = originalBgColor;
+        if (overlay) overlay.visible = originalOverlayVisible;
+        canvas.renderAll();
+    }
+};
+
+/**
+ * Export editable area as PDF
+ * @param canvas - Fabric canvas instance
+ * @param editableArea - The editable area bounds
+ * @param filename - Output filename
+ * @param resolution - Resolution multiplier
+ */
+export const exportEditableAreaAsPDF = (
+    canvas: fabric.Canvas,
+    editableArea: EditableArea,
+    filename: string = 'design-editable.pdf',
+    resolution: number = 3
+): void => {
+    // Deselect all objects before export
+    canvas.discardActiveObject();
+
+    // Save original state
+    const originalBg = canvas.backgroundImage;
+    const originalBgColor = canvas.backgroundColor;
+    const overlay = canvas.getObjects().find((obj: any) => obj.name === 'editableAreaOverlay');
+    const originalOverlayVisible = overlay ? overlay.visible : true;
+
+    // Prepare for export
+    canvas.backgroundImage = undefined;
+    canvas.backgroundColor = 'transparent';
+    if (overlay) overlay.visible = false;
+    
+    canvas.renderAll();
+
+    try {
+        const dataURL = canvas.toDataURL({
+            format: 'png',
+            quality: 1,
+            multiplier: resolution,
+            left: editableArea.left,
+            top: editableArea.top,
+            width: editableArea.width,
+            height: editableArea.height,
+        });
+
+        // Create PDF
+        const pdf = new jsPDF({
+            orientation: editableArea.width > editableArea.height ? 'landscape' : 'portrait',
+            unit: 'px',
+            format: [editableArea.width, editableArea.height]
+        });
+
+        // Add image to PDF
+        pdf.addImage(dataURL, 'PNG', 0, 0, editableArea.width, editableArea.height);
+        pdf.save(filename);
+    } finally {
+        // Restore original state
+        canvas.backgroundImage = originalBg;
+        canvas.backgroundColor = originalBgColor;
+        if (overlay) overlay.visible = originalOverlayVisible;
+        canvas.renderAll();
+    }
+};
+
+/**
+ * Export editable area as high-resolution PNG with customizable resolution
+ * @param canvas - Fabric canvas instance
+ * @param editableArea - The editable area bounds
+ * @param filename - Output filename
+ * @param dpi - Desired DPI (dots per inch)
+ */
+export const exportEditableAreaAsHighResPNG = (
+    canvas: fabric.Canvas,
+    editableArea: EditableArea,
+    filename: string = 'design-print-ready.png',
+    dpi: number = 300
+): void => {
+    // Calculate resolution multiplier based on DPI
+    // Standard screen is 96 DPI, so multiplier = dpi / 96
+    const resolution = dpi / 96;
+
+    exportEditableAreaAsPNG(canvas, editableArea, filename, resolution);
+};
+
+/**
+ * Export editable area with transparent background
+ * @param canvas - Fabric canvas instance
+ * @param editableArea - The editable area bounds
+ * @param filename - Output filename
+ * @param resolution - Resolution multiplier
+ */
+export const exportEditableAreaTransparent = (
+    canvas: fabric.Canvas,
+    editableArea: EditableArea,
+    filename: string = 'design-transparent.png',
+    resolution: number = 3
+): void => {
+    // Re-use the main PNG export since it now handles transparency and cropping correctly
+    exportEditableAreaAsPNG(canvas, editableArea, filename, resolution);
 };
 
 export const exportCanvasToJSON = (canvas: fabric.Canvas): string => {

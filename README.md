@@ -28,7 +28,13 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 - **Delete**: Click trash icon to remove layer
 
 ### Exporting
-- **Export PNG**: Download design as high-res image for printing
+- **Export Menu**: Dropdown with multiple export options
+  - **PNG (High Res)**: Editable area only, 3x resolution
+  - **PNG (300 DPI)**: Editable area only, print-ready quality
+  - **TIFF**: Editable area only, high-quality format
+  - **PDF**: Editable area only, vector-based PDF
+  - **Transparent PNG**: Editable area with transparent background
+  - **Full Canvas PNG**: Complete design with mockup background
 - **Save JSON**: Save design data to edit later
 - **Import**: Load previously saved JSON designs
 

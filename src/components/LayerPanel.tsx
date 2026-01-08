@@ -129,11 +129,6 @@ export default function LayerPanel({ canvas }: LayerPanelProps) {
 
     return (
         <div className={styles.layerPanel}>
-            <div className={styles.layerPanelHeader}>
-                <FaLayerGroup />
-                Layers ({layers.length})
-            </div>
-
             <div className={styles.layerList}>
                 {layers.length === 0 ? (
                     <div className={styles.emptyState}>

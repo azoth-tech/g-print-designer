@@ -14,21 +14,42 @@ import {
     FaImage,
     FaFont,
     FaSmile,
+    FaUndo,
+    FaRedo,
+    FaStar,
     FaGripVertical,
-    FaTimes,
     FaEraser,
+    FaTimes,
     FaFillDrip,
+    FaLayerGroup,
+    FaThLarge,
+    FaChevronLeft,
+    FaChevronRight,
 } from 'react-icons/fa';
 import styles from './Toolbar.module.css';
 import { addTextToCanvas, addImageToCanvas } from '@/utils/canvasUtils';
 import { EditableArea } from '@/types/types';
+import TemplatesModal from './TemplatesModal';
 
 interface ToolbarProps {
     canvas: fabric.Canvas | null;
-    onExportPNG: () => void;
     onExportJSON: () => void;
     onImportJSON: () => void;
     editableArea?: EditableArea;
+    onToggleLayerPanel: () => void;
+    isLayerPanelOpen: boolean;
+    templateCategory?: string;
+    onLoadTemplate: (jsonUrl: string) => void;
+    onOpenExport: () => void;
+    onUndo: () => void;
+    onRedo: () => void;
+    canUndo: boolean;
+    canRedo: boolean;
+}
+
+interface Template {
+    name: string;
+    url: string;
 }
 
 const FONT_FAMILIES = [
@@ -50,18 +71,34 @@ const CLIPART_IMAGES = [
     { name: 'Circle', url: '/clipart/circle.png' },
 ];
 
+const ITEMS_PER_PAGE = 10;
+
 export default function Toolbar({
     canvas,
-    onExportPNG,
     onExportJSON,
     onImportJSON,
     editableArea,
+    onToggleLayerPanel,
+    isLayerPanelOpen,
+    templateCategory,
+    onLoadTemplate,
+    onOpenExport,
+    onUndo,
+    onRedo,
+    canUndo,
+    canRedo,
 }: ToolbarProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const clipartButtonRef = useRef<HTMLButtonElement>(null);
+    const exportButtonRef = useRef<HTMLButtonElement>(null);
     const [activeObject, setActiveObject] = useState<fabric.Object | null>(null);
     const [showClipart, setShowClipart] = useState(false);
     const [clipartPosition, setClipartPosition] = useState({ top: 0, left: 0 });
+
+    // Templates State
+    const [showTemplates, setShowTemplates] = useState(false);
+
+    // Dragging State
 
     // Dragging State
     const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
@@ -225,6 +262,10 @@ export default function Toolbar({
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [showClipart]);
 
+
+
+
+
     const handleAddText = () => {
         if (!canvas) return;
         addTextToCanvas(canvas, 'Double click to edit', undefined, editableArea);
@@ -320,20 +361,44 @@ export default function Toolbar({
 
     return (
         <div className={styles.toolbar}>
+            {/* History Tools */}
+            <div className={styles.toolbarSection}>
+                <button
+                    className="btn-icon"
+                    onClick={onUndo}
+                    disabled={!canUndo}
+                    title="Undo (Ctrl+Z)"
+                    style={{ opacity: canUndo ? 1 : 0.5 }}
+                >
+                    <FaUndo />
+                </button>
+                <button
+                    className="btn-icon"
+                    onClick={onRedo}
+                    disabled={!canRedo}
+                    title="Redo (Ctrl+Y)"
+                    style={{ opacity: canRedo ? 1 : 0.5 }}
+                >
+                    <FaRedo />
+                </button>
+            </div>
+
+            <div className={styles.toolbarDivider} />
+
             {/* Add Elements */}
             <div className={styles.toolbarSection}>
-                <button className="btn-primary" onClick={handleAddText} title="Add Text">
+                <button className="btn-secondary" onClick={handleAddText} title="Add Text">
                     <FaFont className={styles.icon} />
-                    <span className={styles.buttonLabel}>Add Text</span>
+                    <span className={styles.buttonLabel}>Text</span>
                 </button>
 
                 <button
-                    className="btn-primary"
+                    className="btn-secondary"
                     onClick={() => fileInputRef.current?.click()}
                     title="Upload Image"
                 >
                     <FaImage className={styles.icon} />
-                    <span className={styles.buttonLabel}>Upload Image</span>
+                    <span className={styles.buttonLabel}>Image</span>
                 </button>
                 <input
                     ref={fileInputRef}
@@ -343,20 +408,59 @@ export default function Toolbar({
                     className={styles.fileInput}
                 />
 
-                <div>
+                <button
+                    ref={clipartButtonRef}
+                    className="btn-secondary"
+                    onClick={() => setShowClipart(!showClipart)}
+                    title="Shapes & Clipart"
+                >
+                    <FaStar className={styles.icon} />
+                    <span className={styles.buttonLabel}>Shapes</span>
+                </button>
+
+                {templateCategory && (
                     <button
-                        ref={clipartButtonRef}
                         className="btn-secondary"
-                        onClick={() => setShowClipart(!showClipart)}
-                        title="Clipart Library"
+                        onClick={() => setShowTemplates(true)}
+                        title="Templates"
                     >
-                        <FaSmile className={styles.icon} />
-                        <span className={styles.buttonLabel}>Clipart</span>
+                        <FaThLarge className={styles.icon} />
+                        <span className={styles.buttonLabel}>Templates</span>
                     </button>
-                </div>
+                )}
             </div>
 
-            <div className={styles.toolbarDivider} />
+            <div style={{ flex: 1 }} />
+
+            {/* Export/Import */}
+            <div className={styles.exportButtons}>
+                <button className="btn-secondary" onClick={onImportJSON} title="Import Design">
+                    <FaFileUpload className={styles.icon} />
+                    <span className={styles.buttonLabel}>Import</span>
+                </button>
+
+                <button className="btn-secondary" onClick={onExportJSON} title="Export as JSON">
+                    <FaFileDownload className={styles.icon} />
+                    <span className={styles.buttonLabel}>Save JSON</span>
+                </button>
+
+
+
+                <button className="btn-primary" onClick={onOpenExport} title="Export Design">
+                    <FaFileDownload className={styles.icon} />
+                    <span className={styles.buttonLabel}>Export</span>
+                </button>
+
+                <div className={styles.toolbarDivider} />
+
+                <button
+                    className={`btn-secondary ${isLayerPanelOpen ? styles.active : ''}`}
+                    onClick={onToggleLayerPanel}
+                    title={isLayerPanelOpen ? 'Hide Layers' : 'Show Layers'}
+                >
+                    <FaLayerGroup className={styles.icon} style={{ marginRight: 0 }} />
+                </button>
+            </div>
 
             {/* Clipart Dropdown - Rendered via Portal */}
             {showClipart &&
@@ -391,25 +495,19 @@ export default function Toolbar({
                     document.body
                 )}
 
-            {/* Export/Import */}
-            <div className={styles.exportButtons}>
-                <button className="btn-secondary" onClick={onImportJSON} title="Import Design">
-                    <FaFileUpload className={styles.icon} />
-                    <span className={styles.buttonLabel}>Import</span>
-                </button>
 
-                <button className="btn-primary" onClick={onExportJSON} title="Export as JSON">
-                    <FaFileDownload className={styles.icon} />
-                    <span className={styles.buttonLabel}>Save JSON</span>
-                </button>
 
-                <button className="btn-primary" onClick={onExportPNG} title="Export as PNG">
-                    <FaFileDownload className={styles.icon} />
-                    <span className={styles.buttonLabel}>Export PNG</span>
-                </button>
-            </div>
+            {/* Templates Modal */}
+            <TemplatesModal
+                isOpen={showTemplates}
+                onClose={() => setShowTemplates(false)}
+                onSelect={(url) => {
+                    onLoadTemplate(url);
+                    setShowTemplates(false);
+                }}
+                initialCategory={templateCategory}
+            />
 
-            {/* Floating Text Toolbar - Only visible when text is selected */}
             {/* Floating Text Toolbar - Only visible when text is selected */}
             {isTextSelected && !hideFloatingToolbar && typeof window !== 'undefined' && createPortal(
                 <div
@@ -419,26 +517,18 @@ export default function Toolbar({
                         cursor: isDragging ? 'grabbing' : 'default'
                     }}
                 >
-                    <div
-                        className={styles.floatingHeader}
-                        onMouseDown={handleDragStart}
-                        onTouchStart={handleTouchStart}
-                        style={{ touchAction: 'none' }} // Prevent scrolling while dragging
-                    >
-                        <FaGripVertical className={styles.dragHandle} />
-                        <span className={styles.headerTitle}>Text Tools</span>
-                        <button
-                            className={styles.closeToolbar}
-                            onClick={() => setHideFloatingToolbar(true)}
-                            title="Close Toolbar"
-                        >
-                            <FaTimes />
-                        </button>
-                    </div>
-
                     <div className={styles.floatingContent}>
+                        {/* Drag Handle */}
+                        <div
+                            className={styles.dragHandleContainer}
+                            onMouseDown={handleDragStart}
+                            onTouchStart={handleTouchStart}
+                            title="Drag to move"
+                        >
+                            <FaGripVertical className={styles.dragHandle} />
+                        </div>
+
                         <div className={styles.toolbarSection}>
-                            <span className={styles.toolbarLabel}>Font:</span>
                             <select
                                 className={styles.fontSelect}
                                 value={currentText?.fontFamily || 'Arial'}
@@ -511,6 +601,15 @@ export default function Toolbar({
                                 <FaAlignRight />
                             </button>
                         </div>
+
+                        {/* Close Button */}
+                        <button
+                            className={styles.closeToolbar}
+                            onClick={() => setHideFloatingToolbar(true)}
+                            title="Close Toolbar"
+                        >
+                            <FaTimes />
+                        </button>
                     </div>
                 </div>,
                 document.body
@@ -525,24 +624,17 @@ export default function Toolbar({
                         cursor: isDragging ? 'grabbing' : 'default'
                     }}
                 >
-                    <div
-                        className={styles.floatingHeader}
-                        onMouseDown={handleDragStart}
-                        onTouchStart={handleTouchStart}
-                        style={{ touchAction: 'none' }}
-                    >
-                        <FaGripVertical className={styles.dragHandle} />
-                        <span className={styles.headerTitle}>Image Tools</span>
-                        <button
-                            className={styles.closeToolbar}
-                            onClick={() => setHideFloatingToolbar(true)}
-                            title="Close Toolbar"
-                        >
-                            <FaTimes />
-                        </button>
-                    </div>
-
                     <div className={styles.floatingContent}>
+                        {/* Drag Handle */}
+                        <div
+                            className={styles.dragHandleContainer}
+                            onMouseDown={handleDragStart}
+                            onTouchStart={handleTouchStart}
+                            title="Drag to move"
+                        >
+                            <FaGripVertical className={styles.dragHandle} />
+                        </div>
+
                         <div className={styles.toolbarSection}>
                             <button
                                 className={`${styles.formatButton} ${hasRemoveBgFilter ? styles.active : ''}`}
@@ -570,6 +662,15 @@ export default function Toolbar({
                                 />
                             </div>
                         </div>
+
+                        {/* Close Button */}
+                        <button
+                            className={styles.closeToolbar}
+                            onClick={() => setHideFloatingToolbar(true)}
+                            title="Close Toolbar"
+                        >
+                            <FaTimes />
+                        </button>
                     </div>
                 </div>,
                 document.body

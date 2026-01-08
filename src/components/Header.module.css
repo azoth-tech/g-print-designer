@@ -1,0 +1,123 @@
+.header {
+    height: 4rem;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1.5rem;
+    box-shadow: var(--shadow-sm);
+    flex-shrink: 0;
+    z-index: 20;
+}
+
+.leftSection,
+.rightSection {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.logoBox {
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: var(--radius-md);
+    background: linear-gradient(135deg, #3b82f6, #4f46e5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    box-shadow: var(--shadow-sm);
+}
+
+.logoIcon {
+    font-size: 1.25rem;
+}
+
+.appTitle {
+    font-size: 1.125rem;
+    font-weight: 700;
+    line-height: 1.25;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.productInfo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.productName {
+    color: var(--primary-color);
+    font-weight: 500;
+}
+
+.primaryBtn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--primary-color);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    font-weight: 500;
+    box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.2);
+    border: none;
+    cursor: pointer;
+    transition: all var(--transition-base);
+}
+
+.primaryBtn:hover {
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+}
+
+.secondaryBtn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-secondary);
+    background: transparent;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    font-weight: 500;
+    border: none;
+    cursor: pointer;
+    transition: all var(--transition-base);
+}
+
+.secondaryBtn:hover {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+.iconBtn {
+    width: 2.25rem;
+    height: 2.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    background: transparent;
+    color: var(--text-secondary);
+    border: none;
+    cursor: pointer;
+    transition: all var(--transition-base);
+}
+
+.iconBtn:hover {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+.separator {
+    width: 1px;
+    height: 1.5rem;
+    background: var(--border-color);
+    margin: 0 0.25rem;
+}

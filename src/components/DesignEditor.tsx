@@ -2,9 +2,11 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import * as fabric from 'fabric';
-import { FaLayerGroup, FaTimes } from 'react-icons/fa';
+import { FaLayerGroup, FaTimes, FaFileImage, FaFilePdf, FaFile, FaPalette } from 'react-icons/fa';
+import Header from './Header';
 import Toolbar from './Toolbar';
 import LayerPanel from './LayerPanel';
+import PropertiesPanel from './PropertiesPanel';
 import styles from './DesignEditor.module.css';
 import { ProductConfig } from '@/types/types';
 import {
@@ -13,6 +15,11 @@ import {
     importCanvasFromJSON,
     downloadJSON,
     createEditableAreaOverlay,
+    exportEditableAreaAsPNG,
+    exportEditableAreaAsTIFF,
+    exportEditableAreaAsPDF,
+    exportEditableAreaAsHighResPNG,
+    exportEditableAreaTransparent,
 } from '@/utils/canvasUtils';
 
 interface DesignEditorProps {
@@ -24,8 +31,31 @@ export default function DesignEditor({ productConfig }: DesignEditorProps) {
     const [canvas, setCanvas] = useState<fabric.Canvas | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isLayerPanelOpen, setIsLayerPanelOpen] = useState(true);
+    const [showExportModal, setShowExportModal] = useState(false);
     const [layoutScale, setLayoutScale] = useState(1);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [isDarkMode, setIsDarkMode] = useState(false);
+    const [activeSidebarTab, setActiveSidebarTab] = useState<'layers' | 'properties'>('layers');
+
+    // Core Features State
+    const [history, setHistory] = useState<string[]>([]);
+    const [historyIndex, setHistoryIndex] = useState(-1);
+    const [clipboard, setClipboard] = useState<fabric.Object | null>(null);
+    const [isHistoryProcessing, setIsHistoryProcessing] = useState(false);
+
+    // Zoom State (using layoutScale)
+    // We already have layoutScale, but we need to track if it's manual or auto
+    // For simplicity, we'll just manipulate layoutScale directly
+
+
+    const toggleTheme = () => {
+        setIsDarkMode(!isDarkMode);
+        if (!isDarkMode) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    };
 
     // Toggle layer panel on mobile and calculate scale
     useEffect(() => {
@@ -40,7 +70,7 @@ export default function DesignEditor({ productConfig }: DesignEditorProps) {
             // Calculate scale to fit 800px canvas into screen
             // Check both width and height constraints
             const padding = 32;
-            const headerHeight = 100; // Approx header + toolbar height
+            const headerHeight = 0; // Header is removed
             const availableWidth = width - padding;
             const availableHeight = window.innerHeight - headerHeight - padding;
 
@@ -156,9 +186,207 @@ export default function DesignEditor({ productConfig }: DesignEditorProps) {
         };
     }, [productConfig]);
 
+    // History & Shortcuts Logic
+    useEffect(() => {
+        if (!canvas) return;
+
+        const saveHistory = () => {
+            if (isHistoryProcessing) return;
+
+            const json = JSON.stringify(canvas.toJSON(['id', 'name', 'selectable', 'evented']));
+
+            setHistory(prev => {
+                const newHistory = prev.slice(0, historyIndex + 1);
+                newHistory.push(json);
+                return newHistory;
+            });
+            setHistoryIndex(prev => prev + 1);
+        };
+
+        // Initial save
+        if (historyIndex === -1) {
+            saveHistory();
+        }
+
+        const handleObjectModified = () => saveHistory();
+
+        canvas.on('object:modified', handleObjectModified);
+        canvas.on('object:added', handleObjectModified);
+        canvas.on('object:removed', handleObjectModified);
+
+        return () => {
+            canvas.off('object:modified', handleObjectModified);
+            canvas.off('object:added', handleObjectModified);
+            canvas.off('object:removed', handleObjectModified);
+        };
+    }, [canvas, isHistoryProcessing, historyIndex]);
+
+    const handleUndo = async () => {
+        if (historyIndex <= 0 || !canvas) return;
+
+        setIsHistoryProcessing(true);
+        const prevIndex = historyIndex - 1;
+        const json = history[prevIndex];
+
+        try {
+            if (!json) {
+                console.error('No history state found at index', prevIndex);
+                return;
+            }
+            await canvas.loadFromJSON(JSON.parse(json));
+            canvas.renderAll();
+            setHistoryIndex(prevIndex);
+        } finally {
+            setIsHistoryProcessing(false);
+        }
+    };
+
+    const handleRedo = async () => {
+        if (historyIndex >= history.length - 1 || !canvas) return;
+
+        setIsHistoryProcessing(true);
+        const nextIndex = historyIndex + 1;
+        const json = history[nextIndex];
+
+        try {
+            if (!json) {
+                console.error('No history state found at index', nextIndex);
+                return;
+            }
+            await canvas.loadFromJSON(JSON.parse(json));
+            canvas.renderAll();
+            setHistoryIndex(nextIndex);
+        } finally {
+            setIsHistoryProcessing(false);
+        }
+    };
+
+    // Keyboard Shortcuts
+    useEffect(() => {
+        if (!canvas) return;
+
+        const handleKeyDown = async (e: KeyboardEvent) => {
+            // Ignore if input focused
+            if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'TEXTAREA') return;
+
+            const activeObject = canvas.getActiveObject();
+            const cmdKey = e.metaKey || e.ctrlKey;
+
+            // Delete
+            if (e.key === 'Backspace' || e.key === 'Delete') {
+                if (activeObject) {
+                    // Prevent deleting background overlay or editable area
+                    if ((activeObject as any).name === 'editableAreaOverlay' || (activeObject as any).name === 'productMockup') return;
+                    canvas.remove(activeObject);
+                    canvas.discardActiveObject();
+                    canvas.requestRenderAll();
+                }
+            }
+
+            // Copy
+            if (cmdKey && e.key === 'c') {
+                if (activeObject) {
+                    activeObject.clone().then((cloned: fabric.Object) => {
+                        setClipboard(cloned);
+                    });
+                }
+            }
+
+            // Paste
+            if (cmdKey && e.key === 'v') {
+                if (clipboard) {
+                    clipboard.clone().then((cloned: fabric.Object) => {
+                        canvas.discardActiveObject();
+                        cloned.set({
+                            left: (cloned.left || 0) + 20,
+                            top: (cloned.top || 0) + 20,
+                            evented: true,
+                        });
+
+                        if (cloned.type === 'activeSelection') {
+                            cloned.canvas = canvas;
+                            cloned.forEachObject((obj: any) => {
+                                canvas.add(obj);
+                            });
+                            cloned.setCoords();
+                        } else {
+                            canvas.add(cloned);
+                        }
+
+                        setClipboard(cloned);
+                        canvas.setActiveObject(cloned);
+                        canvas.requestRenderAll();
+                    });
+                }
+            }
+
+            // Cut
+            if (cmdKey && e.key === 'x') {
+                if (activeObject) {
+                    activeObject.clone().then((cloned: fabric.Object) => {
+                        setClipboard(cloned);
+                        canvas.remove(activeObject);
+                        canvas.requestRenderAll();
+                    });
+                }
+            }
+
+            // Undo/Redo
+            if (cmdKey && e.key === 'z') {
+                e.preventDefault();
+                if (e.shiftKey) {
+                    handleRedo();
+                } else {
+                    handleUndo();
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [canvas, clipboard, historyIndex, history]);
+
+    // Zoom Handlers
+    const handleZoomIn = () => setLayoutScale(prev => Math.min(prev + 0.1, 3));
+    const handleZoomOut = () => setLayoutScale(prev => Math.max(prev - 0.1, 0.2));
+    const handleResetZoom = () => {
+        // Re-calculate fit scale
+        const width = window.innerWidth;
+        const padding = 32;
+        const availableWidth = width - padding;
+        const availableHeight = window.innerHeight - padding;
+        const scaleX = availableWidth / 800;
+        const scaleY = availableHeight / 800;
+        setLayoutScale(Math.min(1, scaleX, scaleY));
+    };
     const handleExportPNG = () => {
         if (!canvas) return;
         exportCanvasToPNG(canvas, `${productConfig.name}-design.png`);
+    };
+
+    const handleExportEditablePNG = () => {
+        if (!canvas || !productConfig.editableArea) return;
+        exportEditableAreaAsPNG(canvas, productConfig.editableArea, `${productConfig.name}-editable.png`, 3);
+    };
+
+    const handleExportHighResPNG = () => {
+        if (!canvas || !productConfig.editableArea) return;
+        exportEditableAreaAsHighResPNG(canvas, productConfig.editableArea, `${productConfig.name}-print-300dpi.png`, 300);
+    };
+
+    const handleExportTIFF = () => {
+        if (!canvas || !productConfig.editableArea) return;
+        exportEditableAreaAsTIFF(canvas, productConfig.editableArea, `${productConfig.name}-editable.tiff`, 3);
+    };
+
+    const handleExportPDF = () => {
+        if (!canvas || !productConfig.editableArea) return;
+        exportEditableAreaAsPDF(canvas, productConfig.editableArea, `${productConfig.name}-editable.pdf`, 3);
+    };
+
+    const handleExportTransparent = () => {
+        if (!canvas || !productConfig.editableArea) return;
+        exportEditableAreaTransparent(canvas, productConfig.editableArea, `${productConfig.name}-transparent.png`, 3);
     };
 
     const handleExportJSON = () => {
@@ -189,37 +417,56 @@ export default function DesignEditor({ productConfig }: DesignEditorProps) {
         e.target.value = '';
     };
 
+    const handleLoadTemplate = async (jsonUrl: string) => {
+        if (!canvas) return;
+
+        setIsLoading(true);
+        try {
+            const response = await fetch(jsonUrl);
+            const json = await response.json();
+
+            // Assuming importCanvasFromJSON handles clearing and loading
+            await importCanvasFromJSON(canvas, JSON.stringify(json));
+            setIsLoading(false);
+        } catch (error) {
+            console.error('Error loading template:', error);
+            alert('Failed to load template');
+            setIsLoading(false);
+        }
+    };
+
     const toggleLayerPanel = () => {
         setIsLayerPanelOpen(!isLayerPanelOpen);
     };
 
     return (
-        <div className={styles.container}>
-            <div className={styles.header}>
-                <h1 className={styles.title}>Design Editor</h1>
-                <p className={styles.subtitle}>
-                    Editing Product {productConfig.name}
-                </p>
-                <button
-                    className={styles.layerToggle}
-                    onClick={() => setIsLayerPanelOpen(!isLayerPanelOpen)}
-                    title={isLayerPanelOpen ? 'Hide Layers' : 'Show Layers'}
-                >
-                    <FaLayerGroup className={styles.toggleIcon} />
-                    <span className={styles.toggleLabel}>{isLayerPanelOpen ? 'Hide Layers' : 'Layers'}</span>
-                </button>
-            </div>
-
-            <Toolbar
-                canvas={canvas}
-                onExportPNG={handleExportPNG}
-                onExportJSON={handleExportJSON}
-                onImportJSON={handleImportJSON}
-                editableArea={productConfig.editableArea}
+        <div className={`${styles.appContainer} ${isDarkMode ? 'dark' : ''}`}>
+            <Header
+                productName={productConfig.name}
+                toggleTheme={toggleTheme}
+                isDarkMode={isDarkMode}
             />
 
-            <div className={styles.mainContent}>
-                <div className={styles.canvasContainer}>
+            <div className={styles.secondaryToolbarWrapper}>
+                <Toolbar
+                    canvas={canvas}
+                    onExportJSON={handleExportJSON}
+                    onImportJSON={handleImportJSON}
+                    editableArea={productConfig.editableArea}
+                    onToggleLayerPanel={toggleLayerPanel}
+                    isLayerPanelOpen={isLayerPanelOpen}
+                    templateCategory={productConfig.templateCategory}
+                    onLoadTemplate={handleLoadTemplate}
+                    onOpenExport={() => setShowExportModal(true)}
+                    onUndo={handleUndo}
+                    onRedo={handleRedo}
+                    canUndo={historyIndex > 0}
+                    canRedo={historyIndex < history.length - 1}
+                />
+            </div>
+
+            <main className={styles.mainContent}>
+                <div className={styles.canvasArea}>
                     {isLoading && (
                         <div className={styles.loadingOverlay}>
                             <div className={styles.loadingSpinner} />
@@ -227,43 +474,67 @@ export default function DesignEditor({ productConfig }: DesignEditorProps) {
                     )}
                     {/* Responsive Canvas Wrapper */}
                     <div
-                        className={styles.canvasWrapper}
-                        style={{
-                            width: (canvas?.width || 800) * layoutScale,
-                            height: (canvas?.height || 800) * layoutScale,
-                            overflow: 'hidden'
-                        }}
+                        className={styles.canvasCenterer}
                     >
-                        <div style={{
-                            transform: `scale(${layoutScale})`,
-                            transformOrigin: 'top left',
-                            width: canvas?.width || 800,
-                            height: canvas?.height || 800
-                        }}>
-                            <canvas ref={canvasRef} className={styles.canvas} />
-                            {isLoading && (
-                                <div className={styles.loadingOverlay}>
-                                    <div className={styles.loadingSpinner} />
-                                </div>
-                            )}
+                        <div
+                            className={styles.canvasWrapper}
+                            style={{
+                                width: (canvas?.width || 800) * layoutScale,
+                                height: (canvas?.height || 800) * layoutScale,
+                            }}
+                        >
+                            <div style={{
+                                transform: `scale(${layoutScale})`,
+                                transformOrigin: 'top left',
+                                width: canvas?.width || 800,
+                                height: canvas?.height || 800
+                            }}>
+                                <canvas ref={canvasRef} className={styles.canvas} />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Zoom / Canvas Controls (Floating) - Could be a component */}
+                    <div className={styles.canvasControls}>
+                        <div className={styles.zoomControls}>
+                            {/* ... Zoom buttons logic to be added later or reuse exisitng ... */}
                         </div>
                     </div>
                 </div>
 
-                <div className={`${styles.layerPanelContainer} ${isLayerPanelOpen ? styles.open : styles.closed}`}>
-                    <div className={styles.panelHeader}>
-                        <span className={styles.panelTitle}>Layers</span>
+                <aside className={`${styles.rightSidebar} ${isLayerPanelOpen ? styles.open : styles.closed}`}>
+                    <div className={styles.sidebarHeader}>
+                        <div className={styles.sidebarTabs}>
+                            <button
+                                className={`${styles.sidebarTab} ${activeSidebarTab === 'layers' ? styles.activeTab : ''}`}
+                                onClick={() => setActiveSidebarTab('layers')}
+                            >
+                                Layers
+                            </button>
+                            <button
+                                className={`${styles.sidebarTab} ${activeSidebarTab === 'properties' ? styles.activeTab : ''}`}
+                                onClick={() => setActiveSidebarTab('properties')}
+                            >
+                                Properties
+                            </button>
+                        </div>
                         <button
-                            className={styles.closeLayerPanel}
+                            className={styles.closeSidebarBtn}
                             onClick={() => setIsLayerPanelOpen(false)}
-                            title="Close Panel"
+                            title="Close Sidebar"
                         >
                             <FaTimes />
                         </button>
                     </div>
-                    <LayerPanel canvas={canvas} />
-                </div>
-            </div>
+                    <div className={styles.sidebarContent}>
+                        {activeSidebarTab === 'layers' ? (
+                            <LayerPanel canvas={canvas} />
+                        ) : (
+                            <PropertiesPanel canvas={canvas} />
+                        )}
+                    </div>
+                </aside>
+            </main>
 
             {/* Hidden file input for JSON import */}
             <input
@@ -273,6 +544,94 @@ export default function DesignEditor({ productConfig }: DesignEditorProps) {
                 onChange={handleFileSelect}
                 style={{ display: 'none' }}
             />
+            {/* Export Modal */}
+            {showExportModal && (
+                <div className={styles.modalOverlay} onClick={() => setShowExportModal(false)}>
+                    <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+                        <div className={styles.modalHeader}>
+                            <h3 className={styles.modalTitle}>Export Options</h3>
+                            <button
+                                className={styles.modalClose}
+                                onClick={() => setShowExportModal(false)}
+                            >
+                                <FaTimes />
+                            </button>
+                        </div>
+
+                        <div className={styles.exportSection}>
+                            <div className={styles.exportSectionTitle}>Print Files (Editable Area)</div>
+                            <div className={styles.exportGrid}>
+                                <button
+                                    className={styles.exportBtn}
+                                    onClick={() => {
+                                        handleExportEditablePNG();
+                                        setShowExportModal(false);
+                                    }}
+                                >
+                                    <FaFileImage className={styles.exportBtnIcon} />
+                                    <span>PNG (High Res)</span>
+                                </button>
+                                <button
+                                    className={styles.exportBtn}
+                                    onClick={() => {
+                                        handleExportHighResPNG();
+                                        setShowExportModal(false);
+                                    }}
+                                >
+                                    <FaFileImage className={styles.exportBtnIcon} />
+                                    <span>PNG (300 DPI Print Ready)</span>
+                                </button>
+                                <button
+                                    className={styles.exportBtn}
+                                    onClick={() => {
+                                        handleExportTIFF();
+                                        setShowExportModal(false);
+                                    }}
+                                >
+                                    <FaFile className={styles.exportBtnIcon} />
+                                    <span>TIFF</span>
+                                </button>
+                                <button
+                                    className={styles.exportBtn}
+                                    onClick={() => {
+                                        handleExportPDF();
+                                        setShowExportModal(false);
+                                    }}
+                                >
+                                    <FaFilePdf className={styles.exportBtnIcon} />
+                                    <span>PDF</span>
+                                </button>
+                                <button
+                                    className={styles.exportBtn}
+                                    onClick={() => {
+                                        handleExportTransparent();
+                                        setShowExportModal(false);
+                                    }}
+                                >
+                                    <FaPalette className={styles.exportBtnIcon} />
+                                    <span>Transparent PNG</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className={styles.exportSection}>
+                            <div className={styles.exportSectionTitle}>Mockup</div>
+                            <div className={styles.exportGrid}>
+                                <button
+                                    className={styles.exportBtn}
+                                    onClick={() => {
+                                        handleExportPNG();
+                                        setShowExportModal(false);
+                                    }}
+                                >
+                                    <FaFileImage className={styles.exportBtnIcon} />
+                                    <span>Full Canvas Mockup</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

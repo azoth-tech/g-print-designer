@@ -1,31 +1,133 @@
-.container {
+/* Modern Layout Styles */
+.appContainer {
     display: flex;
     flex-direction: column;
-    height: 100dvh;
-    /* Dynamic viewport height for mobile browsers */
-    background: linear-gradient(135deg, var(--bg-primary) 0%, #1a1f3a 100%);
+    height: 100vh;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
     overflow: hidden;
-    /* Prevent body scroll */
 }
 
 .mainContent {
-    display: flex;
     flex: 1;
+    display: flex;
     overflow: hidden;
-    /* Lock scroll */
     position: relative;
 }
 
-.canvasContainer {
+.secondaryToolbarWrapper {
+    /* To be styled to match the strip look */
+    z-index: 10;
+    box-shadow: var(--shadow-sm);
+}
+
+.canvasArea {
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    background-color: var(--bg-primary);
+    /* Fallback */
+    /* Radial Gradient Background from Mockup */
+    background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+    background-size: 20px 20px;
+    overflow: auto;
+}
+
+:global(.dark) .canvasArea {
+    background-image: radial-gradient(#334155 1px, transparent 1px);
+}
+
+.canvasCenterer {
+    padding: 2rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 2rem;
-    position: relative;
-    overflow: hidden;
-    /* Lock scroll */
+    min-width: min-content;
+    min-height: min-content;
 }
+
+.canvasWrapper {
+    position: relative;
+    box-shadow: var(--shadow-xl);
+    border-radius: var(--radius-lg);
+    background: white;
+    /* Optional: ring/border */
+}
+
+/* Right Sidebar Styles */
+.rightSidebar {
+    width: 20rem;
+    /* w-80 */
+    background: var(--bg-secondary);
+    border-left: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    transition: margin-right 0.3s ease;
+    z-index: 15;
+}
+
+.rightSidebar.closed {
+    margin-right: -20rem;
+    display: none;
+    /* Hide for now, or animate */
+}
+
+.sidebarHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-tertiary);
+}
+
+.sidebarTabs {
+    display: flex;
+    flex: 1;
+}
+
+.sidebarTab {
+    flex: 1;
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: transparent;
+    border-bottom: 2px solid transparent;
+    transition: all var(--transition-base);
+}
+
+.sidebarTab:hover {
+    color: var(--text-primary);
+    background: var(--bg-primary);
+}
+
+.activeTab {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+    background: rgba(59, 130, 246, 0.05);
+    /* blue-50/50 approx */
+}
+
+.closeSidebarBtn {
+    padding: 0.75rem;
+    color: var(--text-muted);
+    transition: color 0.2s;
+}
+
+.closeSidebarBtn:hover {
+    color: var(--danger-color);
+}
+
+.sidebarContent {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0;
+}
+
+/* Old canvasContainer / wrapper styles removed or mapped */
 
 .canvasWrapper {
     position: relative;
@@ -68,153 +170,131 @@
     }
 }
 
-.header {
-    padding: 1.5rem 2rem;
-    background: var(--bg-glass);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid var(--border-color);
+/* Export Modal Styles */
+.modalOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    backdrop-filter: blur(2px);
+    animation: fadeIn 0.2s ease-out;
+}
+
+.modalContent {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+    padding: 1.5rem;
+    width: 100%;
+    max-width: 400px;
+    animation: scaleIn 0.2s ease-out;
+}
+
+.modalHeader {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    margin-bottom: 1.5rem;
 }
 
-.title {
-    font-size: 1.5rem;
-    font-weight: 700;
-    background: linear-gradient(135deg, var(--primary-light), var(--secondary-color));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-.subtitle {
-    font-size: 0.875rem;
-    color: var(--text-muted);
-    margin-top: 0.25rem;
-}
-
-.layerToggle {
-    display: flex;
-    align-items: center;
-    padding: 0.5rem 1rem;
-    background: var(--primary-color);
-    border: 1px solid transparent;
-    border-radius: var(--radius-md);
-    color: white;
-    font-size: 0.875rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: var(--shadow-sm);
-}
-
-.layerToggle:hover {
-    opacity: 0.9;
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-md);
-}
-
-.toggleIcon {
-    margin-right: 0.5rem;
-}
-
-.layerPanelContainer {
-    width: 300px;
-    background: var(--bg-glass);
-    border-left: 1px solid var(--border-color);
-    transition: all 0.3s ease;
-    display: flex;
-    flex-direction: column;
-}
-
-/* Desktop Logic: Hide/Show panel to expand canvas */
-.layerPanelContainer.closed {
-    width: 0;
-    opacity: 0;
-    overflow: hidden;
-    border-left: none;
-    padding: 0;
-}
-
-.panelHeader {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 1rem;
-    background: var(--bg-tertiary);
-    border-bottom: 1px solid var(--border-color);
-}
-
-.panelTitle {
+.modalTitle {
+    font-size: 1.25rem;
     font-weight: 600;
     color: var(--text-primary);
 }
 
-.closeLayerPanel {
-    display: block;
-    background: transparent;
+.modalClose {
+    background: none;
     border: none;
-    border-radius: var(--radius-md);
     color: var(--text-muted);
-    padding: 0.5rem;
-    font-size: 1.1rem;
     cursor: pointer;
-    line-height: 0;
-    transition: all 0.2s ease;
+    font-size: 1.25rem;
+    padding: 0.25rem;
+    border-radius: var(--radius-sm);
+    transition: all 0.2s;
 }
 
-.closeLayerPanel:hover {
-    background: var(--bg-secondary);
+.modalClose:hover {
     color: var(--danger-color);
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.exportSection {
+    margin-bottom: 1.5rem;
+}
+
+.exportSectionTitle {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.exportGrid {
+    display: grid;
+    gap: 0.5rem;
+}
+
+.exportBtn {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: var(--bg-tertiary);
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    transition: all 0.2s;
+    text-align: left;
+    font-size: 0.95rem;
+}
+
+.exportBtn:hover {
+    border-color: var(--primary-color);
+    background: rgba(59, 130, 246, 0.05);
+}
+
+.exportBtnIcon {
+    color: var(--primary-color);
+    font-size: 1.1rem;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes scaleIn {
+    from {
+        transform: scale(0.95);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
 }
 
 @media (max-width: 768px) {
-    .header {
-        padding: 1rem;
-    }
-
-    .title {
-        font-size: 1.25rem;
-    }
-
-    .canvasContainer {
-        padding: 1rem;
-    }
-
-    /** Make layer panel overlay on mobile */
-    .layerPanelContainer {
+    .rightSidebar {
         position: fixed;
-        /* Changed from absolute to fixed for better mobile overlay */
         top: 0;
         right: 0;
         bottom: 0;
         width: 85%;
-        max-width: 300px;
-        z-index: 1000;
-        /* Higher z-index to overlay everything including canvas */
-        background: var(--bg-secondary);
-        box-shadow: -5px 0 15px rgba(0, 0, 0, 0.5);
-    }
-
-    .layerPanelContainer.closed {
-        transform: translateX(100%);
-        width: 85%;
-        /* Restore width for animation logic */
-        opacity: 1;
-        /* Handle opacity via display/transform */
-        display: none;
-    }
-
-    .layerPanelContainer.open {
-        transform: translateX(0);
-        display: flex;
-    }
-
-    .toggleLabel {
-        display: none;
-    }
-
-    .toggleIcon {
-        margin-right: 0;
+        max-width: 320px;
+        box-shadow: -5px 0 20px rgba(0, 0, 0, 0.2);
     }
 }

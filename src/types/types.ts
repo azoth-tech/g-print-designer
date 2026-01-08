@@ -17,6 +17,7 @@ export interface ProductConfig {
   name: string;
   mockupImage: string;
   editableArea: EditableArea;
+  templateCategory?: string;
 }
 
 export interface DesignExport {
