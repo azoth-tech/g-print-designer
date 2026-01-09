@@ -23,9 +23,11 @@ import {
 
 interface DesignEditorProps {
     productConfig: ProductConfig;
+    onSecondaryAction?: () => void;
+    secondaryButtonText?: string;
 }
 
-export default function DesignEditor({ productConfig }: DesignEditorProps) {
+export default function DesignEditor({ productConfig, onSecondaryAction, secondaryButtonText }: DesignEditorProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [canvas, setCanvas] = useState<fabric.Canvas | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -291,22 +293,41 @@ export default function DesignEditor({ productConfig }: DesignEditorProps) {
     }, [canvas, clipboard, historyIndex, history]);
 
     const handleOpenExport = () => {
-        if (!canvas) return;
+        if (!canvas || !productConfig.editableArea) return;
 
-        // Generate a preview image (exclude overlay for better preview)
+        // Generate a preview showing the editable area cropped
+        // Save current state
+        const originalBg = canvas.backgroundImage;
+        const originalBgColor = canvas.backgroundColor;
         const overlay = canvas.getObjects().find((obj: any) => obj.name === 'editableAreaOverlay');
         const wasVisible = overlay ? overlay.visible : true;
-        if (overlay) overlay.visible = false;
 
-        const dataURL = canvas.toDataURL({
+        // Hide overlay and background for clean export preview
+        if (overlay) overlay.visible = false;
+        canvas.backgroundImage = undefined;
+        canvas.backgroundColor = 'transparent';
+        canvas.renderAll();
+
+        // Get the editable area bounds
+        const { left, top, width: areaWidth, height: areaHeight } = productConfig.editableArea;
+
+        // Create cropped preview - just the editable area content
+        const croppedPreview = canvas.toDataURL({
             format: 'png',
-            multiplier: 0.5 // Low res for preview
+            multiplier: 0.25, // Low res for preview
+            left: left,
+            top: top,
+            width: areaWidth,
+            height: areaHeight
         });
 
+        // Restore state
         if (overlay) overlay.visible = wasVisible;
+        canvas.backgroundImage = originalBg;
+        canvas.backgroundColor = originalBgColor;
         canvas.requestRenderAll();
 
-        setExportPreviewImage(dataURL);
+        setExportPreviewImage(croppedPreview);
         setShowExportDrawer(true);
     };
 
@@ -502,6 +523,8 @@ export default function DesignEditor({ productConfig }: DesignEditorProps) {
                     height: productConfig.editableArea.height
                 }}
                 onExport={handleExport}
+                onSecondaryAction={onSecondaryAction}
+                secondaryButtonText={secondaryButtonText}
             />
         </div>
     );

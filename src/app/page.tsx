@@ -1,3 +1,5 @@
+'use client';
+
 import DesignEditorWrapper from '@/components/DesignEditorWrapper';
 import { ProductConfig } from '@/types/types';
 
@@ -37,5 +39,17 @@ const productConfig: ProductConfig = {
 
 
 export default function Home() {
-  return <DesignEditorWrapper productConfig={productConfig} />;
+  const handleSecondaryAction = () => {
+    // Example: Save/Order callback
+    console.log('Secondary action triggered - save or order');
+    alert('Save/Order action would be handled here - e.g., save to database or proceed to checkout');
+  };
+
+  return (
+    <DesignEditorWrapper
+      productConfig={productConfig}
+      onSecondaryAction={handleSecondaryAction}
+      secondaryButtonText="Save for Later"
+    />
+  );
 }

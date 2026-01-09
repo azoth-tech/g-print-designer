@@ -27,6 +27,8 @@ interface ExportDrawerProps {
     previewImage: string | null;
     initialDimensions: { width: number; height: number };
     onExport: (settings: ExportSettings) => void;
+    onSecondaryAction?: () => void;
+    secondaryButtonText?: string;
 }
 
 export default function ExportDrawer({
@@ -34,7 +36,9 @@ export default function ExportDrawer({
     onClose,
     previewImage,
     initialDimensions,
-    onExport
+    onExport,
+    onSecondaryAction,
+    secondaryButtonText
 }: ExportDrawerProps) {
     // State
     const [format, setFormat] = useState<'PNG' | 'JPG' | 'PDF' | 'SVG'>('PNG');
@@ -133,7 +137,7 @@ export default function ExportDrawer({
                     {/* Preview Section */}
                     <div className={styles.section}>
                         <div className={styles.sectionHeader}>
-                            <label className={styles.label}>Preview</label>
+                            <label className={styles.label}>Preview (Editable Area on Product)</label>
                         </div>
                         <div className={styles.previewContainer}>
                             {previewImage ? (
@@ -147,8 +151,9 @@ export default function ExportDrawer({
                                 </div>
                             )}
                             <div className={styles.previewOverlay}>
-                                <p style={{ fontWeight: 600, fontSize: '0.875rem' }}>Design Preview</p>
-                                <p style={{ fontSize: '0.75rem', opacity: 0.8 }}>Print Area: {width}px x {height}px</p>
+                                <p style={{ fontWeight: 600, fontSize: '0.875rem' }}>Design on Product</p>
+                                <p style={{ fontSize: '0.75rem', opacity: 0.8 }}>Editable Area: {initialDimensions.width}×{initialDimensions.height}px</p>
+                                <p style={{ fontSize: '0.75rem', opacity: 0.8 }}>Export: {width}×{height}px @ {dpi} DPI</p>
                             </div>
                         </div>
                     </div>
@@ -292,6 +297,14 @@ export default function ExportDrawer({
                 {/* Footer */}
                 <div className={styles.footer}>
                     <div className={styles.actions}>
+                        {onSecondaryAction && secondaryButtonText && (
+                            <button
+                                className={styles.secondaryButton}
+                                onClick={onSecondaryAction}
+                            >
+                                {secondaryButtonText}
+                            </button>
+                        )}
                         <button className={styles.downloadButton} onClick={handleExportClick}>
                             <FaDownload /> Export Download
                         </button>

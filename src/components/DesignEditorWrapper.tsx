@@ -36,8 +36,10 @@ const DesignEditor = dynamic(() => import('./DesignEditor'), {
 
 interface DesignEditorWrapperProps {
     productConfig: ProductConfig;
+    onSecondaryAction?: () => void;
+    secondaryButtonText?: string;
 }
 
-export default function DesignEditorWrapper({ productConfig }: DesignEditorWrapperProps) {
-    return <DesignEditor productConfig={productConfig} />;
+export default function DesignEditorWrapper({ productConfig, onSecondaryAction, secondaryButtonText }: DesignEditorWrapperProps) {
+    return <DesignEditor productConfig={productConfig} onSecondaryAction={onSecondaryAction} secondaryButtonText={secondaryButtonText} />;
 }
