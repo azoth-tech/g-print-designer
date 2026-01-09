@@ -388,6 +388,8 @@ export const createEditableAreaOverlay = (
         selectable: false,
         evented: false,
         name: 'editableAreaOverlay',
+        // Allow clicks to pass through to objects below
+        hoverCursor: 'default',
     });
 
     return overlay;

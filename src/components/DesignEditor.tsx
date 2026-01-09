@@ -93,28 +93,8 @@ export default function DesignEditor({ productConfig }: DesignEditorProps) {
             preserveObjectStacking: true,
         });
 
-        // Add boundary constraints
-        fabricCanvas.on('object:moving', (e) => {
-            const obj = e.target;
-            if (!obj || (obj as any).name === 'editableAreaOverlay') return;
-
-            const { editableArea } = productConfig;
-            const objWidth = (obj.width || 0) * (obj.scaleX || 1);
-            const objHeight = (obj.height || 0) * (obj.scaleY || 1);
-
-            if (obj.left! < editableArea.left) {
-                obj.left = editableArea.left;
-            }
-            if (obj.top! < editableArea.top) {
-                obj.top = editableArea.top;
-            }
-            if (obj.left! + objWidth > editableArea.left + editableArea.width) {
-                obj.left = editableArea.left + editableArea.width - objWidth;
-            }
-            if (obj.top! + objHeight > editableArea.top + editableArea.height) {
-                obj.top = editableArea.top + editableArea.height - objHeight;
-            }
-        });
+        // No boundary constraints - allow objects to move/resize freely
+        // The editable area overlay is just a visual guide
 
         const loadBackground = async () => {
             try {
@@ -152,7 +132,9 @@ export default function DesignEditor({ productConfig }: DesignEditorProps) {
                     productConfig.editableArea
                 );
                 fabricCanvas.add(overlay);
-                fabricCanvas.sendObjectToBack(overlay);
+                // Bring overlay to FRONT so it appears above all objects
+                // Cast to any to access Fabric.js internal methods
+                (fabricCanvas as any).bringObjectToFront(overlay);
 
                 setIsLoading(false);
                 setCanvas(fabricCanvas);
@@ -192,7 +174,14 @@ export default function DesignEditor({ productConfig }: DesignEditorProps) {
             saveHistory();
         }
 
-        const handleObjectModified = () => saveHistory();
+        const handleObjectModified = () => {
+            saveHistory();
+            // Keep overlay on top
+            const overlay = canvas.getObjects().find((obj: any) => obj.name === 'editableAreaOverlay');
+            if (overlay) {
+                (canvas as any).bringObjectToFront(overlay);
+            }
+        };
 
         canvas.on('object:modified', handleObjectModified);
         canvas.on('object:added', handleObjectModified);
