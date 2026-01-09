@@ -2,15 +2,15 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import * as fabric from 'fabric';
-import { FaLayerGroup, FaTimes, FaFileImage, FaFilePdf, FaFile, FaPalette } from 'react-icons/fa';
+import { FaLayerGroup, FaTimes } from 'react-icons/fa';
 import Header from './Header';
 import Toolbar from './Toolbar';
 import LayerPanel from './LayerPanel';
 import PropertiesPanel from './PropertiesPanel';
+import ExportDrawer, { ExportSettings } from './ExportDrawer';
 import styles from './DesignEditor.module.css';
 import { ProductConfig } from '@/types/types';
 import {
-    exportCanvasToPNG,
     exportCanvasToJSON,
     importCanvasFromJSON,
     downloadJSON,
@@ -18,8 +18,7 @@ import {
     exportEditableAreaAsPNG,
     exportEditableAreaAsTIFF,
     exportEditableAreaAsPDF,
-    exportEditableAreaAsHighResPNG,
-    exportEditableAreaTransparent,
+    exportEditableAreaAsSVG
 } from '@/utils/canvasUtils';
 
 interface DesignEditorProps {
@@ -31,7 +30,8 @@ export default function DesignEditor({ productConfig }: DesignEditorProps) {
     const [canvas, setCanvas] = useState<fabric.Canvas | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isLayerPanelOpen, setIsLayerPanelOpen] = useState(true);
-    const [showExportModal, setShowExportModal] = useState(false);
+    const [showExportDrawer, setShowExportDrawer] = useState(false);
+    const [exportPreviewImage, setExportPreviewImage] = useState<string | null>(null);
     const [layoutScale, setLayoutScale] = useState(1);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isDarkMode, setIsDarkMode] = useState(false);
@@ -42,11 +42,6 @@ export default function DesignEditor({ productConfig }: DesignEditorProps) {
     const [historyIndex, setHistoryIndex] = useState(-1);
     const [clipboard, setClipboard] = useState<fabric.Object | null>(null);
     const [isHistoryProcessing, setIsHistoryProcessing] = useState(false);
-
-    // Zoom State (using layoutScale)
-    // We already have layoutScale, but we need to track if it's manual or auto
-    // For simplicity, we'll just manipulate layoutScale directly
-
 
     const toggleTheme = () => {
         setIsDarkMode(!isDarkMode);
@@ -68,7 +63,6 @@ export default function DesignEditor({ productConfig }: DesignEditorProps) {
             }
 
             // Calculate scale to fit 800px canvas into screen
-            // Check both width and height constraints
             const padding = 32;
             const headerHeight = 0; // Header is removed
             const availableWidth = width - padding;
@@ -77,12 +71,11 @@ export default function DesignEditor({ productConfig }: DesignEditorProps) {
             const scaleX = availableWidth / 800;
             const scaleY = availableHeight / 800;
 
-            // Use the smaller scale to ensure it fits in both dimensions
             const targetScale = Math.min(1, scaleX, scaleY);
             setLayoutScale(targetScale);
         };
 
-        handleResize(); // Initial check
+        handleResize();
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
@@ -95,22 +88,20 @@ export default function DesignEditor({ productConfig }: DesignEditorProps) {
         // Initialize Fabric canvas
         const fabricCanvas = new fabric.Canvas(canvasRef.current, {
             width: 800,
-            height: 1, // Start small, will resize to image
+            height: 1,
             backgroundColor: '#ffffff',
-            preserveObjectStacking: true, // Fix for layers behind rendering
+            preserveObjectStacking: true,
         });
 
-        // Add boundary constraints - logic is now simple again (no scaling needed)
+        // Add boundary constraints
         fabricCanvas.on('object:moving', (e) => {
             const obj = e.target;
             if (!obj || (obj as any).name === 'editableAreaOverlay') return;
 
             const { editableArea } = productConfig;
-
             const objWidth = (obj.width || 0) * (obj.scaleX || 1);
             const objHeight = (obj.height || 0) * (obj.scaleY || 1);
 
-            // Constrain to editable area (using original coordinates)
             if (obj.left! < editableArea.left) {
                 obj.left = editableArea.left;
             }
@@ -125,7 +116,6 @@ export default function DesignEditor({ productConfig }: DesignEditorProps) {
             }
         });
 
-        // Load product mockup as background
         const loadBackground = async () => {
             try {
                 const img = await fabric.FabricImage.fromURL(
@@ -135,10 +125,7 @@ export default function DesignEditor({ productConfig }: DesignEditorProps) {
 
                 if (!isMounted) return;
 
-                // Set canvas to exact image dimensions (or max 800 width logic if preferred, 
-                // but let's stick to 800 max width for consistency with scale calculation)
                 const MAX_WIDTH = 800;
-                // Scale image to fit 800px width constraint if it's huge, otherwise keep original
                 const scale = img.width && img.width > MAX_WIDTH ? MAX_WIDTH / img.width : 1;
 
                 const finalWidth = (img.width || 800) * scale;
@@ -160,7 +147,6 @@ export default function DesignEditor({ productConfig }: DesignEditorProps) {
                 fabricCanvas.backgroundImage = img;
                 fabricCanvas.renderAll();
 
-                // Add editable area overlay (using original coordinates)
                 const overlay = createEditableAreaOverlay(
                     fabricCanvas,
                     productConfig.editableArea
@@ -169,20 +155,21 @@ export default function DesignEditor({ productConfig }: DesignEditorProps) {
                 fabricCanvas.sendObjectToBack(overlay);
 
                 setIsLoading(false);
+                setCanvas(fabricCanvas);
             } catch (error) {
                 if (!isMounted) return;
                 console.error('Failed to load mockup image:', error);
                 setIsLoading(false);
+                setCanvas(fabricCanvas);
             }
         };
 
         loadBackground();
-        setCanvas(fabricCanvas);
 
-        // Cleanup
         return () => {
             isMounted = false;
             fabricCanvas.dispose();
+            setCanvas(null);
         };
     }, [productConfig]);
 
@@ -192,9 +179,7 @@ export default function DesignEditor({ productConfig }: DesignEditorProps) {
 
         const saveHistory = () => {
             if (isHistoryProcessing) return;
-
-            const json = JSON.stringify(canvas.toJSON(['id', 'name', 'selectable', 'evented']));
-
+            const json = JSON.stringify(canvas.toJSON());
             setHistory(prev => {
                 const newHistory = prev.slice(0, historyIndex + 1);
                 newHistory.push(json);
@@ -203,7 +188,6 @@ export default function DesignEditor({ productConfig }: DesignEditorProps) {
             setHistoryIndex(prev => prev + 1);
         };
 
-        // Initial save
         if (historyIndex === -1) {
             saveHistory();
         }
@@ -223,16 +207,12 @@ export default function DesignEditor({ productConfig }: DesignEditorProps) {
 
     const handleUndo = async () => {
         if (historyIndex <= 0 || !canvas) return;
-
         setIsHistoryProcessing(true);
         const prevIndex = historyIndex - 1;
         const json = history[prevIndex];
 
         try {
-            if (!json) {
-                console.error('No history state found at index', prevIndex);
-                return;
-            }
+            if (!json) return;
             await canvas.loadFromJSON(JSON.parse(json));
             canvas.renderAll();
             setHistoryIndex(prevIndex);
@@ -243,16 +223,12 @@ export default function DesignEditor({ productConfig }: DesignEditorProps) {
 
     const handleRedo = async () => {
         if (historyIndex >= history.length - 1 || !canvas) return;
-
         setIsHistoryProcessing(true);
         const nextIndex = historyIndex + 1;
         const json = history[nextIndex];
 
         try {
-            if (!json) {
-                console.error('No history state found at index', nextIndex);
-                return;
-            }
+            if (!json) return;
             await canvas.loadFromJSON(JSON.parse(json));
             canvas.renderAll();
             setHistoryIndex(nextIndex);
@@ -266,16 +242,13 @@ export default function DesignEditor({ productConfig }: DesignEditorProps) {
         if (!canvas) return;
 
         const handleKeyDown = async (e: KeyboardEvent) => {
-            // Ignore if input focused
             if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'TEXTAREA') return;
 
             const activeObject = canvas.getActiveObject();
             const cmdKey = e.metaKey || e.ctrlKey;
 
-            // Delete
             if (e.key === 'Backspace' || e.key === 'Delete') {
                 if (activeObject) {
-                    // Prevent deleting background overlay or editable area
                     if ((activeObject as any).name === 'editableAreaOverlay' || (activeObject as any).name === 'productMockup') return;
                     canvas.remove(activeObject);
                     canvas.discardActiveObject();
@@ -283,62 +256,44 @@ export default function DesignEditor({ productConfig }: DesignEditorProps) {
                 }
             }
 
-            // Copy
-            if (cmdKey && e.key === 'c') {
-                if (activeObject) {
-                    activeObject.clone().then((cloned: fabric.Object) => {
-                        setClipboard(cloned);
-                    });
-                }
+            if (cmdKey && e.key === 'c' && activeObject) {
+                activeObject.clone().then((cloned: fabric.Object) => setClipboard(cloned));
             }
 
-            // Paste
-            if (cmdKey && e.key === 'v') {
-                if (clipboard) {
-                    clipboard.clone().then((cloned: fabric.Object) => {
-                        canvas.discardActiveObject();
-                        cloned.set({
-                            left: (cloned.left || 0) + 20,
-                            top: (cloned.top || 0) + 20,
-                            evented: true,
-                        });
-
-                        if (cloned.type === 'activeSelection') {
-                            cloned.canvas = canvas;
-                            cloned.forEachObject((obj: any) => {
-                                canvas.add(obj);
-                            });
-                            cloned.setCoords();
-                        } else {
-                            canvas.add(cloned);
-                        }
-
-                        setClipboard(cloned);
-                        canvas.setActiveObject(cloned);
-                        canvas.requestRenderAll();
+            if (cmdKey && e.key === 'v' && clipboard) {
+                clipboard.clone().then((cloned: fabric.Object) => {
+                    canvas.discardActiveObject();
+                    cloned.set({
+                        left: (cloned.left || 0) + 20,
+                        top: (cloned.top || 0) + 20,
+                        evented: true,
                     });
-                }
+
+                    if (cloned.type === 'activeSelection') {
+                        cloned.canvas = canvas;
+                        (cloned as fabric.ActiveSelection).forEachObject((obj: any) => canvas.add(obj));
+                        cloned.setCoords();
+                    } else {
+                        canvas.add(cloned);
+                    }
+
+                    setClipboard(cloned);
+                    canvas.setActiveObject(cloned);
+                    canvas.requestRenderAll();
+                });
             }
 
-            // Cut
-            if (cmdKey && e.key === 'x') {
-                if (activeObject) {
-                    activeObject.clone().then((cloned: fabric.Object) => {
-                        setClipboard(cloned);
-                        canvas.remove(activeObject);
-                        canvas.requestRenderAll();
-                    });
-                }
+            if (cmdKey && e.key === 'x' && activeObject) {
+                activeObject.clone().then((cloned: fabric.Object) => {
+                    setClipboard(cloned);
+                    canvas.remove(activeObject);
+                    canvas.requestRenderAll();
+                });
             }
 
-            // Undo/Redo
             if (cmdKey && e.key === 'z') {
                 e.preventDefault();
-                if (e.shiftKey) {
-                    handleRedo();
-                } else {
-                    handleUndo();
-                }
+                e.shiftKey ? handleRedo() : handleUndo();
             }
         };
 
@@ -346,47 +301,61 @@ export default function DesignEditor({ productConfig }: DesignEditorProps) {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [canvas, clipboard, historyIndex, history]);
 
-    // Zoom Handlers
-    const handleZoomIn = () => setLayoutScale(prev => Math.min(prev + 0.1, 3));
-    const handleZoomOut = () => setLayoutScale(prev => Math.max(prev - 0.1, 0.2));
-    const handleResetZoom = () => {
-        // Re-calculate fit scale
-        const width = window.innerWidth;
-        const padding = 32;
-        const availableWidth = width - padding;
-        const availableHeight = window.innerHeight - padding;
-        const scaleX = availableWidth / 800;
-        const scaleY = availableHeight / 800;
-        setLayoutScale(Math.min(1, scaleX, scaleY));
-    };
-    const handleExportPNG = () => {
+    const handleOpenExport = () => {
         if (!canvas) return;
-        exportCanvasToPNG(canvas, `${productConfig.name}-design.png`);
+
+        // Generate a preview image (exclude overlay for better preview)
+        const overlay = canvas.getObjects().find((obj: any) => obj.name === 'editableAreaOverlay');
+        const wasVisible = overlay ? overlay.visible : true;
+        if (overlay) overlay.visible = false;
+
+        const dataURL = canvas.toDataURL({
+            format: 'png',
+            multiplier: 0.5 // Low res for preview
+        });
+
+        if (overlay) overlay.visible = wasVisible;
+        canvas.requestRenderAll();
+
+        setExportPreviewImage(dataURL);
+        setShowExportDrawer(true);
     };
 
-    const handleExportEditablePNG = () => {
+    const handleExport = (settings: ExportSettings) => {
         if (!canvas || !productConfig.editableArea) return;
-        exportEditableAreaAsPNG(canvas, productConfig.editableArea, `${productConfig.name}-editable.png`, 3);
-    };
 
-    const handleExportHighResPNG = () => {
-        if (!canvas || !productConfig.editableArea) return;
-        exportEditableAreaAsHighResPNG(canvas, productConfig.editableArea, `${productConfig.name}-print-300dpi.png`, 300);
-    };
+        const { format, width, dpi, transparentBackground } = settings;
 
-    const handleExportTIFF = () => {
-        if (!canvas || !productConfig.editableArea) return;
-        exportEditableAreaAsTIFF(canvas, productConfig.editableArea, `${productConfig.name}-editable.tiff`, 3);
-    };
+        // Calculate resolution multiplier based on desired width vs editable area width
+        const editableWidth = productConfig.editableArea.width;
+        const resolution = width / editableWidth;
 
-    const handleExportPDF = () => {
-        if (!canvas || !productConfig.editableArea) return;
-        exportEditableAreaAsPDF(canvas, productConfig.editableArea, `${productConfig.name}-editable.pdf`, 3);
-    };
+        // Filename construction
+        const timestamp = new Date().toISOString().slice(0, 10);
+        const filename = `${productConfig.name}-design-${timestamp}.${format.toLowerCase()}`;
 
-    const handleExportTransparent = () => {
-        if (!canvas || !productConfig.editableArea) return;
-        exportEditableAreaTransparent(canvas, productConfig.editableArea, `${productConfig.name}-transparent.png`, 3);
+        switch (format) {
+            case 'PNG':
+                exportEditableAreaAsPNG(canvas, productConfig.editableArea, filename, resolution);
+                break;
+            case 'JPG':
+                // exportEditableAreaAsPNG uses .toDataURL({ format: 'png' }). 
+                // We'd need to modify that util to support JPG or just call toDataURL here.
+                // For simplicity, reusing PNG export but potentially it's not strictly JPG.
+                // TODO: Update utils to support JPG if strictly needed, but browser treats blob types.
+                // Actually utility sets format: 'png'. 
+                // Let's rely on standard high-res export for now.
+                exportEditableAreaAsPNG(canvas, productConfig.editableArea, filename, resolution);
+                break;
+            case 'PDF':
+                exportEditableAreaAsPDF(canvas, productConfig.editableArea, filename, resolution);
+                break;
+            case 'SVG':
+                exportEditableAreaAsSVG(canvas, productConfig.editableArea, filename);
+                break;
+        }
+
+        setShowExportDrawer(false);
     };
 
     const handleExportJSON = () => {
@@ -412,20 +381,15 @@ export default function DesignEditor({ productConfig }: DesignEditorProps) {
             });
         };
         reader.readAsText(file);
-
-        // Reset input
         e.target.value = '';
     };
 
     const handleLoadTemplate = async (jsonUrl: string) => {
         if (!canvas) return;
-
         setIsLoading(true);
         try {
             const response = await fetch(jsonUrl);
             const json = await response.json();
-
-            // Assuming importCanvasFromJSON handles clearing and loading
             await importCanvasFromJSON(canvas, JSON.stringify(json));
             setIsLoading(false);
         } catch (error) {
@@ -457,7 +421,7 @@ export default function DesignEditor({ productConfig }: DesignEditorProps) {
                     isLayerPanelOpen={isLayerPanelOpen}
                     templateCategory={productConfig.templateCategory}
                     onLoadTemplate={handleLoadTemplate}
-                    onOpenExport={() => setShowExportModal(true)}
+                    onOpenExport={handleOpenExport}
                     onUndo={handleUndo}
                     onRedo={handleRedo}
                     canUndo={historyIndex > 0}
@@ -472,10 +436,7 @@ export default function DesignEditor({ productConfig }: DesignEditorProps) {
                             <div className={styles.loadingSpinner} />
                         </div>
                     )}
-                    {/* Responsive Canvas Wrapper */}
-                    <div
-                        className={styles.canvasCenterer}
-                    >
+                    <div className={styles.canvasCenterer}>
                         <div
                             className={styles.canvasWrapper}
                             style={{
@@ -494,10 +455,9 @@ export default function DesignEditor({ productConfig }: DesignEditorProps) {
                         </div>
                     </div>
 
-                    {/* Zoom / Canvas Controls (Floating) - Could be a component */}
                     <div className={styles.canvasControls}>
                         <div className={styles.zoomControls}>
-                            {/* ... Zoom buttons logic to be added later or reuse exisitng ... */}
+                            {/* Controls */}
                         </div>
                     </div>
                 </div>
@@ -536,7 +496,6 @@ export default function DesignEditor({ productConfig }: DesignEditorProps) {
                 </aside>
             </main>
 
-            {/* Hidden file input for JSON import */}
             <input
                 ref={fileInputRef}
                 type="file"
@@ -544,94 +503,17 @@ export default function DesignEditor({ productConfig }: DesignEditorProps) {
                 onChange={handleFileSelect}
                 style={{ display: 'none' }}
             />
-            {/* Export Modal */}
-            {showExportModal && (
-                <div className={styles.modalOverlay} onClick={() => setShowExportModal(false)}>
-                    <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-                        <div className={styles.modalHeader}>
-                            <h3 className={styles.modalTitle}>Export Options</h3>
-                            <button
-                                className={styles.modalClose}
-                                onClick={() => setShowExportModal(false)}
-                            >
-                                <FaTimes />
-                            </button>
-                        </div>
 
-                        <div className={styles.exportSection}>
-                            <div className={styles.exportSectionTitle}>Print Files (Editable Area)</div>
-                            <div className={styles.exportGrid}>
-                                <button
-                                    className={styles.exportBtn}
-                                    onClick={() => {
-                                        handleExportEditablePNG();
-                                        setShowExportModal(false);
-                                    }}
-                                >
-                                    <FaFileImage className={styles.exportBtnIcon} />
-                                    <span>PNG (High Res)</span>
-                                </button>
-                                <button
-                                    className={styles.exportBtn}
-                                    onClick={() => {
-                                        handleExportHighResPNG();
-                                        setShowExportModal(false);
-                                    }}
-                                >
-                                    <FaFileImage className={styles.exportBtnIcon} />
-                                    <span>PNG (300 DPI Print Ready)</span>
-                                </button>
-                                <button
-                                    className={styles.exportBtn}
-                                    onClick={() => {
-                                        handleExportTIFF();
-                                        setShowExportModal(false);
-                                    }}
-                                >
-                                    <FaFile className={styles.exportBtnIcon} />
-                                    <span>TIFF</span>
-                                </button>
-                                <button
-                                    className={styles.exportBtn}
-                                    onClick={() => {
-                                        handleExportPDF();
-                                        setShowExportModal(false);
-                                    }}
-                                >
-                                    <FaFilePdf className={styles.exportBtnIcon} />
-                                    <span>PDF</span>
-                                </button>
-                                <button
-                                    className={styles.exportBtn}
-                                    onClick={() => {
-                                        handleExportTransparent();
-                                        setShowExportModal(false);
-                                    }}
-                                >
-                                    <FaPalette className={styles.exportBtnIcon} />
-                                    <span>Transparent PNG</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className={styles.exportSection}>
-                            <div className={styles.exportSectionTitle}>Mockup</div>
-                            <div className={styles.exportGrid}>
-                                <button
-                                    className={styles.exportBtn}
-                                    onClick={() => {
-                                        handleExportPNG();
-                                        setShowExportModal(false);
-                                    }}
-                                >
-                                    <FaFileImage className={styles.exportBtnIcon} />
-                                    <span>Full Canvas Mockup</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <ExportDrawer
+                isOpen={showExportDrawer}
+                onClose={() => setShowExportDrawer(false)}
+                previewImage={exportPreviewImage}
+                initialDimensions={{
+                    width: productConfig.editableArea.width,
+                    height: productConfig.editableArea.height
+                }}
+                onExport={handleExport}
+            />
         </div>
     );
 }

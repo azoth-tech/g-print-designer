@@ -296,5 +296,7 @@
         width: 85%;
         max-width: 320px;
         box-shadow: -5px 0 20px rgba(0, 0, 0, 0.2);
+        z-index: 40;
+        /* Fix: Increase z-index to stay above Header (z-15 -> z-40) */
     }
 }

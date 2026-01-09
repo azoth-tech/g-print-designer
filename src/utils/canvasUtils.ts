@@ -115,7 +115,7 @@ export const exportEditableAreaAsPNG = (
 ): void => {
     // Deselect all objects before export
     canvas.discardActiveObject();
-    
+
     // Save original state
     const originalBg = canvas.backgroundImage;
     const originalBgColor = canvas.backgroundColor;
@@ -126,7 +126,7 @@ export const exportEditableAreaAsPNG = (
     canvas.backgroundImage = undefined;
     canvas.backgroundColor = 'transparent';
     if (overlay) overlay.visible = false;
-    
+
     // Render to apply changes before export
     canvas.renderAll();
 
@@ -239,7 +239,7 @@ export const exportEditableAreaAsPDF = (
     canvas.backgroundImage = undefined;
     canvas.backgroundColor = 'transparent';
     if (overlay) overlay.visible = false;
-    
+
     canvas.renderAll();
 
     try {
@@ -310,9 +310,8 @@ export const exportEditableAreaTransparent = (
 };
 
 export const exportCanvasToJSON = (canvas: fabric.Canvas): string => {
-    // Include 'name' feature to identify the overlay
-    // Cast to any to avoid TS error with arguments
-    const json = (canvas as any).toJSON(['name']);
+    // Get canvas JSON
+    const json = canvas.toJSON();
 
     // Remove background image from export
     delete json.backgroundImage;
@@ -392,4 +391,57 @@ export const createEditableAreaOverlay = (
     });
 
     return overlay;
+};
+
+/**
+ * Export editable area as SVG
+ * @param canvas - Fabric canvas instance
+ * @param editableArea - The editable area bounds
+ * @param filename - Output filename
+ */
+export const exportEditableAreaAsSVG = (
+    canvas: fabric.Canvas,
+    editableArea: EditableArea,
+    filename: string = 'design-editable.svg'
+): void => {
+    // Deselect all objects before export
+    canvas.discardActiveObject();
+
+    // Save original state
+    const originalBg = canvas.backgroundImage;
+    const originalBgColor = canvas.backgroundColor;
+    const overlay = canvas.getObjects().find((obj: any) => obj.name === 'editableAreaOverlay');
+    const originalOverlayVisible = overlay ? overlay.visible : true;
+
+    // Prepare for export
+    canvas.backgroundImage = undefined;
+    canvas.backgroundColor = 'transparent';
+    if (overlay) overlay.visible = false;
+
+    // We need to set viewport transform to crop to editable area
+    // Just setting width/height in toSVG options helps, but viewBox needs to be correct
+    const options = {
+        viewBox: {
+            x: editableArea.left,
+            y: editableArea.top,
+            width: editableArea.width,
+            height: editableArea.height
+        },
+        width: String(editableArea.width),
+        height: String(editableArea.height),
+        suppressPreamble: false
+    };
+
+    try {
+        const svg = canvas.toSVG(options);
+
+        const blob = new Blob([svg], { type: 'image/svg+xml' });
+        saveAs(blob, filename);
+    } finally {
+        // Restore original state
+        canvas.backgroundImage = originalBg;
+        canvas.backgroundColor = originalBgColor;
+        if (overlay) overlay.visible = originalOverlayVisible;
+        canvas.renderAll();
+    }
 };

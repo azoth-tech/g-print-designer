@@ -10,7 +10,9 @@ import {
     FaLayerGroup,
     FaArrowUp,
     FaArrowDown,
-    FaTrash
+    FaTrash,
+    FaEraser,
+    FaFillDrip
 } from 'react-icons/fa';
 import styles from './PropertiesPanel.module.css';
 
@@ -23,8 +25,24 @@ const FONT_FAMILIES = [
     'Georgia', 'Palatino', 'Garamond', 'Comic Sans MS', 'Impact'
 ];
 
+// Helper function to convert RGB to hex
+const rgbToHex = (color: string | any): string => {
+    if (typeof color !== 'string') return '#000000';
+    if (color.startsWith('#')) return color;
+
+    const rgb = color.match(/\d+/g);
+    if (!rgb || rgb.length < 3) return '#000000';
+
+    const r = parseInt(rgb[0]).toString(16).padStart(2, '0');
+    const g = parseInt(rgb[1]).toString(16).padStart(2, '0');
+    const b = parseInt(rgb[2]).toString(16).padStart(2, '0');
+
+    return `#${r}${g}${b}`;
+};
+
 export default function PropertiesPanel({ canvas }: PropertiesPanelProps) {
     const [selectedObject, setSelectedObject] = useState<fabric.Object | null>(null);
+    const [hasRemoveBgFilter, setHasRemoveBgFilter] = useState(false);
     // Force update for re-render when object properties change
     const [_, setForceUpdate] = useState({});
 
@@ -34,6 +52,16 @@ export default function PropertiesPanel({ canvas }: PropertiesPanelProps) {
         const updateSelection = () => {
             const active = canvas.getActiveObject();
             setSelectedObject(active || null);
+
+            // Check for RemoveColor filter if image
+            if (active && active.type === 'image') {
+                const img = active as fabric.FabricImage;
+                const hasFilter = img.filters?.some((f: any) => f.type === 'RemoveColor');
+                setHasRemoveBgFilter(!!hasFilter);
+            } else {
+                setHasRemoveBgFilter(false);
+            }
+
             setForceUpdate({});
         };
 
@@ -51,6 +79,29 @@ export default function PropertiesPanel({ canvas }: PropertiesPanelProps) {
             canvas.off('object:modified', updateSelection);
         };
     }, [canvas]);
+
+    const toggleRemoveBackground = () => {
+        if (!canvas || !selectedObject || selectedObject.type !== 'image') return;
+
+        const img = selectedObject as fabric.FabricImage;
+
+        if (hasRemoveBgFilter) {
+            // Remove filter
+            img.filters = img.filters?.filter((f: any) => f.type !== 'RemoveColor') || [];
+            setHasRemoveBgFilter(false);
+        } else {
+            // Add filter (removes white by default)
+            const filter = new fabric.filters.RemoveColor({
+                distance: 0.15, // Tolerance
+            });
+            img.filters = [...(img.filters || []), filter];
+            setHasRemoveBgFilter(true);
+        }
+
+        img.applyFilters();
+        canvas.renderAll();
+        setForceUpdate({});
+    };
 
     const updateProperty = (key: string, value: any) => {
         if (!canvas || !selectedObject) return;
@@ -229,7 +280,7 @@ export default function PropertiesPanel({ canvas }: PropertiesPanelProps) {
                             />
                         </div>
                         <div className={styles.controlGroup}>
-                            <label className={styles.label}>Like color</label>
+                            <label className={styles.label}>Color</label>
                             <div className={styles.colorInputWrapper}>
                                 <div className={styles.colorPreview} style={{ backgroundColor: (selectedObject as any).fill as string }}>
                                     <input
@@ -293,6 +344,43 @@ export default function PropertiesPanel({ canvas }: PropertiesPanelProps) {
                             >
                                 <FaAlignRight />
                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Image Specific Properties */}
+            {isImage && (
+                <div className={styles.section}>
+                    <div className={styles.sectionTitle}>Image Properties</div>
+                    <div className={styles.row}>
+                        <button
+                            className={`${styles.iconBtn} ${hasRemoveBgFilter ? styles.active : ''}`}
+                            style={{ flex: 1, justifyContent: 'center' }}
+                            onClick={toggleRemoveBackground}
+                            title="Remove White Background"
+                        >
+                            <FaEraser style={{ marginRight: '8px' }} />
+                            {hasRemoveBgFilter ? 'Restore Background' : 'Remove Background'}
+                        </button>
+                    </div>
+                    <div className={styles.row}>
+                        <div className={styles.controlGroup}>
+                            <label className={styles.label}>Background Color</label>
+                            <div className={styles.colorInputWrapper}>
+                                <div className={styles.colorPreview} style={{ backgroundColor: rgbToHex(selectedObject.backgroundColor || '#ffffff') }}>
+                                    <input
+                                        type="color"
+                                        className={styles.colorInput}
+                                        value={rgbToHex(selectedObject.backgroundColor || '#ffffff')}
+                                        onChange={(e) => updateProperty('backgroundColor', e.target.value)}
+                                    />
+                                </div>
+                                <span className={styles.colorValue}>
+                                    <FaFillDrip style={{ marginRight: '4px' }} />
+                                    {rgbToHex(selectedObject.backgroundColor || '#ffffff')}
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>

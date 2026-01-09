@@ -2,7 +2,16 @@
   "permissions": {
     "allow": [
       "Bash(npm install:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(find:*)",
+      "Bash(git -C /Users/dvpandian/git/g-print-designer status:*)",
+      "Bash(git -C /Users/dvpandian/git/g-print-designer show:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run build:*)",
+      "Bash(timeout:*)",
+      "Bash(npx @cloudflare/next-on-pages:*)",
+      "Bash(ls:*)",
+      "Bash(git add:*)"
     ]
   }
 }

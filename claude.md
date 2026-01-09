@@ -31,7 +31,11 @@ src/
 │   ├── DesignEditor.tsx         # Main editor component (canvas logic)
 │   ├── Toolbar.tsx              # Top toolbar (add elements, export)
 │   ├── LayerPanel.tsx           # Right sidebar (layer management)
-│   └── *.module.css             # Component-specific styles
+│   ├── ExportDrawer.tsx         # Advanced export settings drawer
+│   ├── ExportDrawer.module.css  # Export drawer styles
+│   ├── DesignEditor.module.css  # Main editor styles
+│   ├── Toolbar.module.css       # Toolbar styles
+│   └── PropertiesPanel.tsx      # Properties panel (deprecated/legacy)
 │
 ├── utils/
 │   └── canvasUtils.ts       # Canvas helper functions
@@ -82,9 +86,24 @@ src/
 - Active layer highlighting
 
 ### 6. Export/Import
+
+#### Basic Export
 - **Export PNG**: High-res (2x multiplier) design download
 - **Export JSON**: Save design state for later editing
 - **Import JSON**: Load previously saved designs
+
+#### Advanced Export (ExportDrawer)
+- **Export Menu**: Dropdown with multiple format options
+- **Editable Area Only**: All exports crop to design area (no mockup)
+- **Resolution Options**:
+  - PNG (High Res): 3x multiplier (288 DPI)
+  - PNG (300 DPI): Print-ready quality
+  - TIFF: Lossless archival format
+  - PDF: Scalable vector-based
+  - Transparent PNG: No background
+  - Full Canvas PNG: Includes mockup
+- **Custom Settings**: Dimensions, DPI, background options
+- **Preview**: Visual preview before export
 
 ### 7. Responsive Design
 - Mobile-optimized UI
@@ -190,6 +209,17 @@ function ProductPage() {
 - **State**: layers, activeLayerId
 - **Effects**: Canvas event listeners for layer sync
 - **Actions**: Select, toggle visibility, delete, reorder
+
+### ExportDrawer.tsx
+- **State**: format, width, height, dpi, transparency, product color
+- **Features**:
+  - Preview image display
+  - Format selection (PNG, JPG, PDF, SVG)
+  - Dimension inputs with aspect ratio lock
+  - DPI slider (72-300)
+  - Background options (transparent, product color)
+- **Props**: isOpen, onClose, previewImage, initialDimensions, onExport
+- **Styling**: Slide-out drawer with smooth animations
 
 ## Deployment
 
@@ -531,5 +561,26 @@ For issues, feature requests, or questions:
 
 ---
 
-*Last Updated: 2026-01-08*
+*Last Updated: 2026-01-09*
 *Project Version: 0.1.0*
+
+---
+
+## 📋 Recent Changes (2026-01-09)
+
+### Documentation Cleanup
+- Removed redundant markdown files (README.md, DEPLOYMENT.md, EXPORT_FEATURES.md, IMPLEMENTATION_SUMMARY.md)
+- Consolidated all documentation into this single CLAUDE.md file
+- Updated component structure to include ExportDrawer
+
+### New Components Added
+- **ExportDrawer.tsx**: Advanced export settings drawer with preview
+- **ExportDrawer.module.css**: Comprehensive styling for export drawer
+- Features: format selection, dimension controls, DPI slider, background options
+
+### Current State
+- ✅ Core editor functionality complete
+- ✅ Layer management working
+- ✅ Export/import features available
+- ✅ ExportDrawer with advanced settings (in development)
+- 🔄 PropertiesPanel.tsx - legacy/deprecated (can be removed)

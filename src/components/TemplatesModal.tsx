@@ -21,6 +21,11 @@ interface TemplatesModalProps {
 
 const ITEMS_PER_PAGE = 6;
 
+// Static template list - no API needed for Cloudflare Pages
+const STATIC_TEMPLATES: Template[] = [
+    { name: 'demo_template', url: '/templates/tshirt/demo_template.json', category: 'tshirt' },
+];
+
 export default function TemplatesModal({ isOpen, onClose, onSelect, initialCategory = 'all' }: TemplatesModalProps) {
     const [templates, setTemplates] = useState<Template[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -35,14 +40,13 @@ export default function TemplatesModal({ isOpen, onClose, onSelect, initialCateg
     const fetchTemplates = async () => {
         setIsLoading(true);
         try {
-            // Fetch all templates (assuming backend handles folder or defaults to 'tshirt')
-            const response = await fetch(`/api/templates?folder=tshirt`);
-            const data = await response.json();
-            if (data.templates) {
-                setTemplates(data.templates);
-            }
+            // Filter templates by category if specified
+            const filtered = initialCategory === 'all'
+                ? STATIC_TEMPLATES
+                : STATIC_TEMPLATES.filter(t => t.category === initialCategory);
+            setTemplates(filtered);
         } catch (error) {
-            console.error('Failed to fetch templates:', error);
+            console.error('Failed to load templates:', error);
         } finally {
             setIsLoading(false);
         }
