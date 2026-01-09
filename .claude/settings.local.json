@@ -20,7 +20,9 @@
       "Bash(git -C /Users/dvpandian/git/g-print-designer diff:*)",
       "Bash(npm audit:*)",
       "Bash(gh auth:*)",
-      "Bash(npm show:*)"
+      "Bash(npm show:*)",
+      "Bash(git -C /Users/dvpandian/git/g-print-designer ls-tree:*)",
+      "Bash(git -C /Users/dvpandian/git/g-print-designer log:*)"
     ]
   }
 }

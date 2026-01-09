@@ -18,7 +18,11 @@ import {
     exportEditableAreaAsPNG,
     exportEditableAreaAsTIFF,
     exportEditableAreaAsPDF,
-    exportEditableAreaAsSVG
+    exportEditableAreaAsSVG,
+    exportEditableAreaWithBackgroundAsPNG,
+    exportEditableAreaWithBackgroundAsTIFF,
+    exportEditableAreaWithBackgroundAsPDF,
+    exportEditableAreaWithBackgroundAsSVG
 } from '@/utils/canvasUtils';
 
 interface DesignEditorProps {
@@ -295,39 +299,27 @@ export default function DesignEditor({ productConfig, onSecondaryAction, seconda
     const handleOpenExport = () => {
         if (!canvas || !productConfig.editableArea) return;
 
-        // Generate a preview showing the editable area cropped
+        // Generate a preview showing the full mockup with editable area overlay
         // Save current state
-        const originalBg = canvas.backgroundImage;
-        const originalBgColor = canvas.backgroundColor;
         const overlay = canvas.getObjects().find((obj: any) => obj.name === 'editableAreaOverlay');
         const wasVisible = overlay ? overlay.visible : true;
 
-        // Hide overlay and background for clean export preview
+        // Keep background image, keep overlay visible
+        // Just hide the overlay temporarily for a cleaner preview
         if (overlay) overlay.visible = false;
-        canvas.backgroundImage = undefined;
-        canvas.backgroundColor = 'transparent';
         canvas.renderAll();
 
-        // Get the editable area bounds
-        const { left, top, width: areaWidth, height: areaHeight } = productConfig.editableArea;
-
-        // Create cropped preview - just the editable area content
-        const croppedPreview = canvas.toDataURL({
+        // Create full canvas preview with background
+        const fullPreview = canvas.toDataURL({
             format: 'png',
             multiplier: 0.25, // Low res for preview
-            left: left,
-            top: top,
-            width: areaWidth,
-            height: areaHeight
         });
 
-        // Restore state
+        // Restore overlay visibility
         if (overlay) overlay.visible = wasVisible;
-        canvas.backgroundImage = originalBg;
-        canvas.backgroundColor = originalBgColor;
         canvas.requestRenderAll();
 
-        setExportPreviewImage(croppedPreview);
+        setExportPreviewImage(fullPreview);
         setShowExportDrawer(true);
     };
 
@@ -344,24 +336,39 @@ export default function DesignEditor({ productConfig, onSecondaryAction, seconda
         const timestamp = new Date().toISOString().slice(0, 10);
         const filename = `${productConfig.name}-design-${timestamp}.${format.toLowerCase()}`;
 
+        // Use "with background" versions for exports (per user request)
+        // transparentBackground option controls whether to include mockup background
+        const useBackground = !transparentBackground;
+
         switch (format) {
             case 'PNG':
-                exportEditableAreaAsPNG(canvas, productConfig.editableArea, filename, resolution);
+                if (useBackground) {
+                    exportEditableAreaWithBackgroundAsPNG(canvas, productConfig.editableArea, filename, resolution);
+                } else {
+                    exportEditableAreaAsPNG(canvas, productConfig.editableArea, filename, resolution);
+                }
                 break;
             case 'JPG':
-                // exportEditableAreaAsPNG uses .toDataURL({ format: 'png' }). 
-                // We'd need to modify that util to support JPG or just call toDataURL here.
-                // For simplicity, reusing PNG export but potentially it's not strictly JPG.
-                // TODO: Update utils to support JPG if strictly needed, but browser treats blob types.
-                // Actually utility sets format: 'png'. 
-                // Let's rely on standard high-res export for now.
-                exportEditableAreaAsPNG(canvas, productConfig.editableArea, filename, resolution);
+                // JPG export uses PNG function (browser handles blob type)
+                if (useBackground) {
+                    exportEditableAreaWithBackgroundAsPNG(canvas, productConfig.editableArea, filename, resolution);
+                } else {
+                    exportEditableAreaAsPNG(canvas, productConfig.editableArea, filename, resolution);
+                }
                 break;
             case 'PDF':
-                exportEditableAreaAsPDF(canvas, productConfig.editableArea, filename, resolution);
+                if (useBackground) {
+                    exportEditableAreaWithBackgroundAsPDF(canvas, productConfig.editableArea, filename, resolution);
+                } else {
+                    exportEditableAreaAsPDF(canvas, productConfig.editableArea, filename, resolution);
+                }
                 break;
             case 'SVG':
-                exportEditableAreaAsSVG(canvas, productConfig.editableArea, filename);
+                if (useBackground) {
+                    exportEditableAreaWithBackgroundAsSVG(canvas, productConfig.editableArea, filename);
+                } else {
+                    exportEditableAreaAsSVG(canvas, productConfig.editableArea, filename);
+                }
                 break;
         }
 

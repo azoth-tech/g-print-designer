@@ -154,3 +154,16 @@
     color: var(--primary-color);
     box-shadow: var(--shadow-sm);
 }
+
+.slider {
+    width: 100%;
+    accent-color: var(--primary-color);
+    cursor: pointer;
+}
+
+.valueDisplay {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    min-width: 2.5rem;
+    text-align: right;
+}
