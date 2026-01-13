@@ -17,7 +17,14 @@ export async function POST(request: Request) {
         const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
         const apiToken = process.env.CLOUDFLARE_API_TOKEN;
 
+        console.log('API Request:', {
+            hasAccountId: !!accountId,
+            hasApiToken: !!apiToken,
+            accountIdLength: accountId?.length
+        });
+
         if (!accountId || !apiToken) {
+            console.error('Missing Cloudflare credentials');
             return NextResponse.json(
                 { error: 'Cloudflare credentials not configured' },
                 { status: 500 }
