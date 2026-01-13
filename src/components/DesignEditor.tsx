@@ -8,6 +8,7 @@ import Toolbar from './Toolbar';
 import LayerPanel from './LayerPanel';
 import PropertiesPanel from './PropertiesPanel';
 import ExportDrawer, { ExportSettings } from './ExportDrawer';
+import AIDesignModal from './AIDesignModal';
 import styles from './DesignEditor.module.css';
 import { ProductConfig } from '@/types/types';
 import {
@@ -24,6 +25,7 @@ import {
     exportEditableAreaWithBackgroundAsPDF,
     exportEditableAreaWithBackgroundAsSVG
 } from '@/utils/canvasUtils';
+import { applyAIDesignToCanvas } from '@/utils/aiUtils';
 
 interface DesignEditorProps {
     productConfig: ProductConfig;
@@ -38,6 +40,7 @@ export default function DesignEditor({ productConfig, onSecondaryAction, seconda
     const [isLayerPanelOpen, setIsLayerPanelOpen] = useState(true);
     const [showExportDrawer, setShowExportDrawer] = useState(false);
     const [exportPreviewImage, setExportPreviewImage] = useState<string | null>(null);
+    const [showAIDesign, setShowAIDesign] = useState(false);
     const [layoutScale, setLayoutScale] = useState(1);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isDarkMode, setIsDarkMode] = useState(false);
@@ -304,8 +307,6 @@ export default function DesignEditor({ productConfig, onSecondaryAction, seconda
         const overlay = canvas.getObjects().find((obj: any) => obj.name === 'editableAreaOverlay');
         const wasVisible = overlay ? overlay.visible : true;
 
-        // Keep background image, keep overlay visible
-        // Just hide the overlay temporarily for a cleaner preview
         if (overlay) overlay.visible = false;
         canvas.renderAll();
 
@@ -420,6 +421,57 @@ export default function DesignEditor({ productConfig, onSecondaryAction, seconda
         setIsLayerPanelOpen(!isLayerPanelOpen);
     };
 
+    const handleAIDesignGenerate = async (prompt: string) => {
+        if (!canvas) return;
+
+        try {
+            const response = await fetch('/api/proxy-image', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    prompt,
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                const errorMessage = errorData.error || `Request failed with status ${response.status}`;
+                console.error('AI Design Generation failed:', errorMessage);
+                alert(`AI Generation Failed: ${errorMessage}`);
+                throw new Error(errorMessage);
+            }
+
+            const data = await response.json();
+
+            if (!data.image) {
+                throw new Error('No image generated');
+            }
+
+            // Construct design data for the image
+            // We need to match AIDesignData interface locally or import it
+            // Since we didn't import strict types, we construct an object that matches what applyAIDesignToCanvas expects
+            const designData = {
+                type: 'image' as const,
+                imageUrl: data.image,
+                position: { left: 100, top: 100 }
+            };
+
+            // Apply AI-generated design to canvas
+            await applyAIDesignToCanvas(canvas, designData, productConfig.editableArea);
+
+            // Keep overlay on top
+            const overlay = canvas.getObjects().find((obj: any) => obj.name === 'editableAreaOverlay');
+            if (overlay) {
+                (canvas as any).bringObjectToFront(overlay);
+            }
+
+            canvas.renderAll();
+        } catch (error) {
+            console.error('AI Design error:', error);
+            throw error;
+        }
+    };
+
     return (
         <div className={`${styles.appContainer} ${isDarkMode ? 'dark' : ''}`}>
             <Header
@@ -443,6 +495,7 @@ export default function DesignEditor({ productConfig, onSecondaryAction, seconda
                     onRedo={handleRedo}
                     canUndo={historyIndex > 0}
                     canRedo={historyIndex < history.length - 1}
+                    onOpenAIDesign={() => setShowAIDesign(true)}
                 />
             </div>
 
@@ -532,6 +585,12 @@ export default function DesignEditor({ productConfig, onSecondaryAction, seconda
                 onExport={handleExport}
                 onSecondaryAction={onSecondaryAction}
                 secondaryButtonText={secondaryButtonText}
+            />
+
+            <AIDesignModal
+                isOpen={showAIDesign}
+                onClose={() => setShowAIDesign(false)}
+                onGenerate={handleAIDesignGenerate}
             />
         </div>
     );

@@ -14,6 +14,7 @@ import {
     FaStar,
     FaLayerGroup,
     FaThLarge,
+    FaMagic,
 } from 'react-icons/fa';
 import styles from './Toolbar.module.css';
 import { addTextToCanvas, addImageToCanvas } from '@/utils/canvasUtils';
@@ -34,6 +35,7 @@ interface ToolbarProps {
     onRedo: () => void;
     canUndo: boolean;
     canRedo: boolean;
+    onOpenAIDesign: () => void;
 }
 
 interface Template {
@@ -63,6 +65,7 @@ export default function Toolbar({
     onRedo,
     canUndo,
     canRedo,
+    onOpenAIDesign,
 }: ToolbarProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const clipartButtonRef = useRef<HTMLButtonElement>(null);
@@ -193,6 +196,16 @@ export default function Toolbar({
                 >
                     <FaStar className={styles.icon} />
                     <span className={styles.buttonLabel}>Shapes</span>
+                </button>
+
+                <button
+                    className="btn-secondary"
+                    onClick={onOpenAIDesign}
+                    title="AI Design Assistant"
+                    style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}
+                >
+                    <FaMagic className={styles.icon} />
+                    <span className={styles.buttonLabel}>AI Design</span>
                 </button>
 
                 {templateCategory && (

@@ -137,7 +137,7 @@ export default function ExportDrawer({
                     {/* Preview Section */}
                     <div className={styles.section}>
                         <div className={styles.sectionHeader}>
-                            <label className={styles.label}>Preview (Editable Area on Product)</label>
+                            <label className={styles.label}>Preview</label>
                         </div>
                         <div className={styles.previewContainer}>
                             {previewImage ? (
