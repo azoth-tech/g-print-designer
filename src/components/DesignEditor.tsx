@@ -434,8 +434,19 @@ export default function DesignEditor({ productConfig, onSecondaryAction, seconda
             });
 
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                const errorMessage = errorData.error || `Request failed with status ${response.status}`;
+                const errorText = await response.text();
+                let errorMessage = `Request failed with status ${response.status}`;
+
+                try {
+                    const errorData = JSON.parse(errorText);
+                    if (errorData.error) {
+                        errorMessage = errorData.error;
+                    }
+                } catch (e) {
+                    // Response was not JSON, probably an HTML error page or empty
+                    console.error('Non-JSON error response:', errorText);
+                }
+
                 console.error('AI Design Generation failed:', errorMessage);
                 alert(`AI Generation Failed: ${errorMessage}`);
                 throw new Error(errorMessage);
