@@ -3,9 +3,3 @@ compatibility_date = "2024-04-01"
 compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = ".vercel/output/static"
 
-[vars]
-CLOUDFLARE_ACCOUNT_ID = ""
-CLOUDFLARE_API_TOKEN = ""
-
-[ai]
-binding = "AI"
