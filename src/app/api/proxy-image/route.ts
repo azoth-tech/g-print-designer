@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+// Removed Import: import { NextResponse } from 'next/server';
 
 export const runtime = 'edge';
 
@@ -8,9 +8,9 @@ export async function POST(request: Request) {
         const { prompt } = body;
 
         if (!prompt) {
-            return NextResponse.json(
-                { error: 'Prompt is required' },
-                { status: 400 }
+            return new Response(
+                JSON.stringify({ error: 'Prompt is required' }),
+                { status: 400, headers: { 'Content-Type': 'application/json' } }
             );
         }
 
@@ -25,9 +25,9 @@ export async function POST(request: Request) {
 
         if (!accountId || !apiToken) {
             console.error('Missing Cloudflare credentials');
-            return NextResponse.json(
-                { error: 'Cloudflare credentials not configured' },
-                { status: 500 }
+            return new Response(
+                JSON.stringify({ error: 'Cloudflare credentials not configured' }),
+                { status: 500, headers: { 'Content-Type': 'application/json' } }
             );
         }
 
@@ -57,14 +57,14 @@ export async function POST(request: Request) {
                 else if (errJson.error) errorMessage = errJson.error;
             } catch (e) { errorMessage += ` - ${errorText}`; }
 
-            return NextResponse.json(
-                { error: errorMessage },
-                { status: response.status }
+            return new Response(
+                JSON.stringify({ error: errorMessage }),
+                { status: response.status, headers: { 'Content-Type': 'application/json' } }
             );
         }
 
-        // Return the binary stream directly. This avoids CPU heavy Base64 conversion and Buffer dependency.
-        return new NextResponse(response.body, {
+        // Return the binary stream directly using standard Response
+        return new Response(response.body, {
             headers: {
                 'Content-Type': 'image/png',
             }
@@ -75,9 +75,9 @@ export async function POST(request: Request) {
         // Log the error message safely if possible
         const errorMessage = error instanceof Error ? error.message : String(error);
 
-        return NextResponse.json(
-            { error: `Internal server error: ${errorMessage}` },
-            { status: 500 }
+        return new Response(
+            JSON.stringify({ error: `Internal server error: ${errorMessage}` }),
+            { status: 500, headers: { 'Content-Type': 'application/json' } }
         );
     }
 }
