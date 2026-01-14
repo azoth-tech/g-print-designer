@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { Buffer } from 'node:buffer';
 
 export const runtime = 'edge';
 
@@ -56,16 +57,7 @@ export async function POST(request: Request) {
 
         // Cloudflare returns the raw image bytes
         const imageBuffer = await response.arrayBuffer();
-
-        // Convert ArrayBuffer to Base64 without using Node.js Buffer
-        let binary = '';
-        const bytes = new Uint8Array(imageBuffer);
-        const len = bytes.byteLength;
-        for (let i = 0; i < len; i++) {
-            binary += String.fromCharCode(bytes[i]);
-        }
-        const base64Image = btoa(binary);
-
+        const base64Image = Buffer.from(imageBuffer).toString('base64');
         const dataUrl = `data:image/png;base64,${base64Image}`;
 
         return NextResponse.json({ image: dataUrl });
