@@ -56,15 +56,27 @@ export async function POST(request: Request) {
 
         // Cloudflare returns the raw image bytes
         const imageBuffer = await response.arrayBuffer();
-        const base64Image = Buffer.from(imageBuffer).toString('base64');
+
+        // Convert ArrayBuffer to Base64 without using Node.js Buffer
+        let binary = '';
+        const bytes = new Uint8Array(imageBuffer);
+        const len = bytes.byteLength;
+        for (let i = 0; i < len; i++) {
+            binary += String.fromCharCode(bytes[i]);
+        }
+        const base64Image = btoa(binary);
+
         const dataUrl = `data:image/png;base64,${base64Image}`;
 
         return NextResponse.json({ image: dataUrl });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error in proxy-image route:', error);
+        // Log the error message safely if possible
+        const errorMessage = error instanceof Error ? error.message : String(error);
+
         return NextResponse.json(
-            { error: 'Internal server error' },
+            { error: `Internal server error: ${errorMessage}` },
             { status: 500 }
         );
     }
