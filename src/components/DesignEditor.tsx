@@ -433,6 +433,7 @@ export default function DesignEditor({ productConfig, onSecondaryAction, seconda
                 })
             });
 
+
             if (!response.ok) {
                 const errorText = await response.text();
                 let errorMessage = `Request failed with status ${response.status}`;
@@ -445,6 +446,7 @@ export default function DesignEditor({ productConfig, onSecondaryAction, seconda
                 } catch (e) {
                     // Response was not JSON, probably an HTML error page or empty
                     console.error('Non-JSON error response:', errorText);
+                    if (errorText.length < 200) errorMessage += `: ${errorText}`;
                 }
 
                 console.error('AI Design Generation failed:', errorMessage);
@@ -452,10 +454,20 @@ export default function DesignEditor({ productConfig, onSecondaryAction, seconda
                 throw new Error(errorMessage);
             }
 
-            const data = await response.json();
+            let imageUrl: string;
+            const contentType = response.headers.get('content-type');
 
-            if (!data.image) {
-                throw new Error('No image generated');
+            if (contentType && contentType.includes('image')) {
+                // Handle binary image response directly
+                const blob = await response.blob();
+                imageUrl = URL.createObjectURL(blob);
+            } else {
+                // Handle legacy JSON response
+                const data = await response.json();
+                if (!data.image) {
+                    throw new Error('No image generated');
+                }
+                imageUrl = data.image;
             }
 
             // Construct design data for the image
@@ -463,7 +475,7 @@ export default function DesignEditor({ productConfig, onSecondaryAction, seconda
             // Since we didn't import strict types, we construct an object that matches what applyAIDesignToCanvas expects
             const designData = {
                 type: 'image' as const,
-                imageUrl: data.image,
+                imageUrl: imageUrl,
                 position: { left: 100, top: 100 }
             };
 

@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { Buffer } from 'node:buffer';
 
 export const runtime = 'edge';
 
@@ -49,18 +48,27 @@ export async function POST(request: Request) {
         if (!response.ok) {
             const errorText = await response.text();
             console.error('Cloudflare AI Error:', response.status, errorText);
+
+            // Try clean error parsing
+            let errorMessage = `Cloudflare AI connection failed: ${response.status}`;
+            try {
+                const errJson = JSON.parse(errorText);
+                if (errJson.errors && errJson.errors.length > 0) errorMessage = errJson.errors[0].message;
+                else if (errJson.error) errorMessage = errJson.error;
+            } catch (e) { errorMessage += ` - ${errorText}`; }
+
             return NextResponse.json(
-                { error: `Cloudflare AI connection failed: ${response.status} - ${errorText}` },
+                { error: errorMessage },
                 { status: response.status }
             );
         }
 
-        // Cloudflare returns the raw image bytes
-        const imageBuffer = await response.arrayBuffer();
-        const base64Image = Buffer.from(imageBuffer).toString('base64');
-        const dataUrl = `data:image/png;base64,${base64Image}`;
-
-        return NextResponse.json({ image: dataUrl });
+        // Return the binary stream directly. This avoids CPU heavy Base64 conversion and Buffer dependency.
+        return new NextResponse(response.body, {
+            headers: {
+                'Content-Type': 'image/png',
+            }
+        });
 
     } catch (error: any) {
         console.error('Error in proxy-image route:', error);
