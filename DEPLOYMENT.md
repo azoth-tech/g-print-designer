@@ -4,73 +4,61 @@
 
 This project uses **OpenNext** to deploy to Cloudflare Workers, which resolves the `async_hooks` compatibility issue with Next.js 15 and Cloudflare Pages.
 
-## Quick Deploy (3 steps)
-
-### 1. Install Wrangler CLI
-```bash
-npm install -g wrangler
-# Or use npx: npx wrangler <command>
-```
-
-### 2. Authenticate with Cloudflare
-```bash
-wrangler login
-```
-
-This opens a browser to authenticate your Cloudflare account.
-
-### 3. Deploy
-```bash
-npm run cf:deploy
-```
-
-That's it! Your app will be deployed to:
-`https://g-print-designer.your-subdomain.workers.dev`
-
 ---
 
-## Detailed Setup
+## GitHub Auto-Deploy Setup (Recommended)
 
-### Step 1: Create Worker in Cloudflare Dashboard
+### Step 1: Create Worker & Connect GitHub
 
 1. Go to **Cloudflare Dashboard** → **Workers & Pages** → **Create**
-2. Select **Workers**
-3. Click **"Connect to Git"** and authorize your repository
-4. Select the `AISupport` branch
+2. Select **"Connect to Git"**
+3. Authorize your repository
+4. Select the `g-print-designer` repository
+5. Select the `AISupport` branch
 
 ### Step 2: Configure Build Settings
 
-In the deployment settings:
+In the deployment settings, set:
 
 | Setting | Value |
 |---------|-------|
-| **Framework preset** | `None` (or `Workers`) |
+| **Framework preset** | `None` |
 | **Build command** | `npm run cf:build` |
 | **Build output directory** | `.open-next` |
 
 ### Step 3: Add Environment Variables
 
-Go to **Settings** → **Variables** and add:
+Go to **Settings** → **Variables** → **Add variable**:
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `CLOUDFLARE_ACCOUNT_ID` | Your Cloudflare account ID | `abc123...` |
-| `CLOUDFLARE_API_TOKEN` | API token with AI permissions | `xyz789...` |
+| Variable | Value |
+|----------|-------|
+| `CLOUDFLARE_ACCOUNT_ID` | Your account ID (from Dashboard URL) |
+| `CLOUDFLARE_API_TOKEN` | API token with Workers AI permissions |
 
-**To get your Account ID:**
-- Cloudflare Dashboard → Account Home → Copy from URL or sidebar
+**To get credentials:**
+- **Account ID**: Dashboard URL: `https://dash.cloudflare.com/{account-id}/`
+- **API Token**: My Profile → API Tokens → Create → Template "Edit Cloudflare Workers" → Include `Workers AI` permission
 
-**To create API Token:**
-- Cloudflare Dashboard → My Profile → API Tokens
-- Create Token → Use template "Edit Cloudflare Workers"
-- Include: `Account.Access: Workers AI`
-- Copy the token immediately
+### Step 4: Save & Deploy
 
-### Step 4: Deploy
+Click **"Save and Deploy"**.
 
-Click **"Save and Deploy"** or use CLI:
+**That's it!** Every push to `AISupport` branch will auto-deploy.
+
+---
+
+## Manual Deployment (Alternative)
+
+If you prefer CLI deployment:
 
 ```bash
+# 1. Install Wrangler
+npm install -g wrangler
+
+# 2. Login (one-time)
+wrangler login
+
+# 3. Deploy
 npm run cf:deploy
 ```
 
@@ -82,8 +70,6 @@ npm run cf:deploy
 ```bash
 npm run cf:preview
 ```
-
-This builds with OpenNext and runs `wrangler dev` for local testing.
 
 ### Test API Route
 ```bash
