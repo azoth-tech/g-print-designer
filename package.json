@@ -7,9 +7,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "pages:build": "npx @cloudflare/next-on-pages",
-    "preview": "npm run pages:build && wrangler pages dev",
-    "deploy": "npm run pages:build && wrangler pages deploy"
+    "cloudflare:build": "opennextjs-cloudflare build",
+    "cloudflare:preview": "npm run cloudflare:build && wrangler dev",
+    "cloudflare:deploy": "npm run cloudflare:build && wrangler deploy",
+    "pages:build": "opennextjs-cloudflare build",
+    "pages:preview": "npm run pages:build && wrangler pages dev",
+    "pages:deploy": "npm run pages:build && wrangler pages deploy"
   },
   "dependencies": {
     "fabric": "^6.9.0",
@@ -21,7 +24,7 @@
     "react-icons": "^5.4.0"
   },
   "devDependencies": {
-    "@cloudflare/next-on-pages": "^1.13.16",
+    "@opennextjs/cloudflare": "^1.14.8",
     "@types/fabric": "^5.3.10",
     "@types/file-saver": "^2.0.7",
     "@types/jspdf": "^1.3.3",
