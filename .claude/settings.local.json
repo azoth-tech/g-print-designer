@@ -27,7 +27,8 @@
       "WebSearch",
       "Bash(npm uninstall:*)",
       "Bash(npm run pages:build:*)",
-      "Bash(git reset HEAD:*)"
+      "Bash(git reset HEAD:*)",
+      "Bash(cat /Users/daniel.stuart/git/designers/g-print-designer/.github/workflows/*.yml:*)"
     ]
   }
 }
