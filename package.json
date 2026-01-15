@@ -7,12 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "cloudflare:build": "opennextjs-cloudflare build",
-    "cloudflare:preview": "npm run cloudflare:build && wrangler dev",
-    "cloudflare:deploy": "npm run cloudflare:build && wrangler deploy",
-    "pages:build": "opennextjs-cloudflare build",
-    "pages:preview": "npm run pages:build && wrangler pages dev",
-    "pages:deploy": "npm run pages:build && wrangler pages deploy"
+    "cf:build": "opennextjs-cloudflare build",
+    "cf:preview": "npm run cf:build && wrangler dev",
+    "cf:deploy": "npm run cf:build && wrangler deploy",
+    "cf:types": "wrangler types"
   },
   "dependencies": {
     "fabric": "^6.9.0",

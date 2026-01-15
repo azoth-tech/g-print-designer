@@ -1,16 +1,25 @@
+# Cloudflare Workers Configuration for G-Print Designer
 name = "g-print-designer"
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
 
-# For OpenNext Cloudflare Workers deployment
+# OpenNext builds the worker here
 main = ".open-next/worker.js"
 
-# Assets configuration for static files
+# Static assets
 [assets]
 directory = ".open-next/assets"
 binding = "ASSETS"
 
-# Environment variables (add your Cloudflare AI credentials)
-# [env.production]
-# vars = { CLOUDFLARE_ACCOUNT_ID = "your-account-id", CLOUDFLARE_API_TOKEN = "your-api-token" }
+# Environment variables for Cloudflare AI
+# Add these in Cloudflare Dashboard or via CLI:
+# - CLOUDFLARE_ACCOUNT_ID
+# - CLOUDFLARE_API_TOKEN
+[env.production.vars]
+# CLOUDFLARE_ACCOUNT_ID = "your-account-id"
+# CLOUDFLARE_API_TOKEN = "your-api-token"
 
+# Preview environment
+[env.preview.vars]
+# CLOUDFLARE_ACCOUNT_ID = "your-account-id"
+# CLOUDFLARE_API_TOKEN = "your-api-token"
