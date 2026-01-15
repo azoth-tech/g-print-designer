@@ -444,16 +444,63 @@ export const createEditableAreaOverlay = (
 };
 
 /**
+ * Helper to embed images as Data URLs for SVG export
+ * fixes issue where images are missing in exported SVG
+ */
+const embedImagesForExport = async (canvas: fabric.Canvas) => {
+    const restoreMap = new Map<fabric.FabricImage, string>();
+    const promises: Promise<void>[] = [];
+
+    canvas.getObjects().forEach((obj) => {
+        if (obj instanceof fabric.FabricImage) {
+            const imgObj = obj as fabric.FabricImage;
+            const src = imgObj.getSrc();
+            // check if not already data url
+            if (src && !src.startsWith('data:')) {
+                const promise = (async () => {
+                    try {
+                        const element = imgObj.getElement();
+                        if (element && element instanceof HTMLImageElement) {
+                            const tmpCanvas = document.createElement('canvas');
+                            tmpCanvas.width = element.naturalWidth || element.width;
+                            tmpCanvas.height = element.naturalHeight || element.height;
+                            const ctx = tmpCanvas.getContext('2d');
+                            if (ctx) {
+                                ctx.drawImage(element, 0, 0);
+                                const base64 = tmpCanvas.toDataURL('image/png');
+                                restoreMap.set(imgObj, src);
+                                await imgObj.setSrc(base64);
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('Failed to embed image for SVG export', e);
+                    }
+                })();
+                promises.push(promise);
+            }
+        }
+    });
+
+    await Promise.all(promises);
+
+    return () => {
+        restoreMap.forEach((src, obj) => {
+            obj.setSrc(src);
+        });
+    };
+};
+
+/**
  * Export editable area as SVG
  * @param canvas - Fabric canvas instance
  * @param editableArea - The editable area bounds
  * @param filename - Output filename
  */
-export const exportEditableAreaAsSVG = (
+export const exportEditableAreaAsSVG = async (
     canvas: fabric.Canvas,
     editableArea: EditableArea,
     filename: string = 'design-editable.svg'
-): void => {
+): Promise<void> => {
     // Deselect all objects before export
     canvas.discardActiveObject();
 
@@ -467,6 +514,9 @@ export const exportEditableAreaAsSVG = (
     canvas.backgroundImage = undefined;
     canvas.backgroundColor = 'transparent';
     if (overlay) overlay.visible = false;
+
+    // Embed images
+    const restoreImages = await embedImagesForExport(canvas);
 
     // We need to set viewport transform to crop to editable area
     // Just setting width/height in toSVG options helps, but viewBox needs to be correct
@@ -489,6 +539,7 @@ export const exportEditableAreaAsSVG = (
         saveAs(blob, filename);
     } finally {
         // Restore original state
+        restoreImages();
         canvas.backgroundImage = originalBg;
         canvas.backgroundColor = originalBgColor;
         if (overlay) overlay.visible = originalOverlayVisible;
@@ -603,11 +654,11 @@ export const exportEditableAreaWithBackgroundAsPDF = (
  * @param editableArea - The editable area bounds
  * @param filename - Output filename
  */
-export const exportEditableAreaWithBackgroundAsSVG = (
+export const exportEditableAreaWithBackgroundAsSVG = async (
     canvas: fabric.Canvas,
     editableArea: EditableArea,
     filename: string = 'design-with-background.svg'
-): void => {
+): Promise<void> => {
     // Deselect all objects before export
     canvas.discardActiveObject();
 
@@ -618,6 +669,9 @@ export const exportEditableAreaWithBackgroundAsSVG = (
     // Hide overlay but KEEP background
     if (overlay) overlay.visible = false;
     canvas.renderAll();
+
+    // Embed images
+    const restoreImages = await embedImagesForExport(canvas);
 
     // For SVG with background, we need to include the background image
     // This is complex, so we'll export the editable area with background as PNG embedded in SVG
@@ -644,6 +698,7 @@ export const exportEditableAreaWithBackgroundAsSVG = (
         saveAs(blob, filename);
     } finally {
         // Restore overlay visibility
+        restoreImages();
         if (overlay) overlay.visible = originalOverlayVisible;
         canvas.renderAll();
     }

@@ -324,8 +324,11 @@ export default function DesignEditor({ productConfig, onSecondaryAction, seconda
         setShowExportDrawer(true);
     };
 
-    const handleExport = (settings: ExportSettings) => {
+    const handleExport = async (settings: ExportSettings) => {
         if (!canvas || !productConfig.editableArea) return;
+
+        setIsLoading(true);
+        setShowExportDrawer(false);
 
         const { format, width, dpi, transparentBackground } = settings;
 
@@ -366,14 +369,14 @@ export default function DesignEditor({ productConfig, onSecondaryAction, seconda
                 break;
             case 'SVG':
                 if (useBackground) {
-                    exportEditableAreaWithBackgroundAsSVG(canvas, productConfig.editableArea, filename);
+                    await exportEditableAreaWithBackgroundAsSVG(canvas, productConfig.editableArea, filename);
                 } else {
-                    exportEditableAreaAsSVG(canvas, productConfig.editableArea, filename);
+                    await exportEditableAreaAsSVG(canvas, productConfig.editableArea, filename);
                 }
                 break;
         }
 
-        setShowExportDrawer(false);
+        setIsLoading(false);
     };
 
     const handleExportJSON = () => {
